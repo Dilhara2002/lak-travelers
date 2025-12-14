@@ -1,0 +1,17 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Default Styles Reset */
+body {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  background-color: #f3f4f6; /* ලා අළු පාට පසුබිමක් */
+}
+
+/* සම්පූර්ණ Screen එකම ගන්න */
+#root {
+  width: 100%;
+  min-height: 100vh;
+}
