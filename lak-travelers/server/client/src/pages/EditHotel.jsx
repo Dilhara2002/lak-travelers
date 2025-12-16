@@ -4,7 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 
 const EditHotel = () => {
-  const { id } = useParams(); // URL එකෙන් ID එක ගන්නවා
+  const { id } = useParams();
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
@@ -13,11 +13,14 @@ const EditHotel = () => {
     description: '',
     pricePerNight: '',
     image: '',
+    mapUrl: '',
   });
+
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
 
-  // 1. පරණ විස්තර Backend එකෙන් අරගන්නවා
+  // 1. Fetch Existing Data
   useEffect(() => {
     const fetchHotel = async () => {
       try {
@@ -27,92 +30,215 @@ const EditHotel = () => {
             location: data.location,
             description: data.description,
             pricePerNight: data.pricePerNight,
-            image: data.image
+            image: data.image,
+            mapUrl: data.mapUrl || ''
         });
         setLoading(false);
       } catch (error) {
         console.error(error);
         alert("Error loading hotel data");
+        navigate('/hotels');
       }
     };
     fetchHotel();
-  }, [id]);
+  }, [id, navigate]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // Image Upload Logic (අපි AddHotel එකේ පාවිච්චි කරපු එකමයි)
-  const handleFileUpload = async (e) => {
-    const file = e.target.files[0];
+  // Image Upload Logic (Same as AddHotel)
+  const handleFileUpload = async (file) => {
+    if (!file) return;
+    setUploading(true);
+
     const data = new FormData();
     data.append('image', file);
-    setUploading(true);
 
     try {
       const config = { headers: { 'Content-Type': 'multipart/form-data' } };
       const res = await axios.post('http://localhost:5001/api/upload', data, config);
+      
+      // Update state with new image path
       setFormData((prev) => ({ ...prev, image: res.data }));
-      setUploading(false);
-      alert('Image Updated! ✅');
     } catch (error) {
       console.error(error);
-      setUploading(false);
       alert('Image upload failed! ❌');
+    } finally {
+      setUploading(false);
     }
+  };
+
+  const onFileSelect = (e) => handleFileUpload(e.target.files[0]);
+  
+  // Drag & Drop Handlers
+  const onDragOver = (e) => { e.preventDefault(); setIsDragging(true); };
+  const onDragLeave = (e) => { e.preventDefault(); setIsDragging(false); };
+  const onDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    handleFileUpload(e.dataTransfer.files[0]);
+  };
+
+  // Helper to render image URL
+  const getImageUrl = (path) => {
+    if (!path) return '';
+    return path.startsWith("http") ? path : `http://localhost:5001${path}`;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      // PUT Request එකක් යවනවා Update කරන්න
       await API.put(`/hotels/${id}`, formData);
       alert('Hotel Updated Successfully! 📝');
-      navigate(`/hotels/${id}`); // ආයේ Hotel Details එකට යනවා
+      navigate(`/hotels/${id}`); // Redirect to details page
     } catch (error) {
       console.error(error);
       alert('Failed to update hotel');
     }
   };
 
-  if (loading) return <div>Loading...</div>;
+  if (loading) return (
+    <div className="min-h-screen flex justify-center items-center bg-slate-50">
+      <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-slate-800"></div>
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-6">
-      <div className="bg-white p-8 rounded shadow-md w-full max-w-lg">
-        <h2 className="text-2xl font-bold mb-6 text-gray-800 text-center">Edit Hotel Details ✏️</h2>
+    <div className="min-h-screen bg-slate-50 py-12 px-4 sm:px-6 lg:px-8 font-sans">
+      <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         
-        <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Professional Header */}
+        <div className="bg-slate-900 px-8 py-6 flex justify-between items-center">
           <div>
-            <label className="block text-gray-700 text-sm font-bold mb-1">Hotel Name</label>
-            <input type="text" name="name" value={formData.name} onChange={handleChange} className="w-full p-2 border rounded" />
+            <h2 className="text-xl font-semibold text-white tracking-wide">Edit Property</h2>
+            <p className="text-slate-400 text-sm mt-1">Update details for {formData.name}</p>
           </div>
-          
-          <div>
-            <label className="block text-gray-700 text-sm font-bold mb-1">Location</label>
-            <input type="text" name="location" value={formData.location} onChange={handleChange} className="w-full p-2 border rounded" />
-          </div>
-
-          <div>
-            <label className="block text-gray-700 text-sm font-bold mb-1">Description</label>
-            <textarea name="description" value={formData.description} onChange={handleChange} className="w-full p-2 border rounded h-24"></textarea>
-          </div>
-
-          <div>
-            <label className="block text-gray-700 text-sm font-bold mb-1">Price (LKR)</label>
-            <input type="number" name="pricePerNight" value={formData.pricePerNight} onChange={handleChange} className="w-full p-2 border rounded" />
-          </div>
-
-          {/* Change Image */}
-          <div className="border p-2 rounded bg-gray-50">
-            <label className="block text-sm font-bold mb-2 text-gray-700">Change Image (Optional)</label>
-            <input type="file" onChange={handleFileUpload} />
-            {uploading && <p className="text-blue-500 text-sm">Uploading...</p>}
-          </div>
-          
-          <button type="submit" className="w-full bg-yellow-500 text-white p-3 rounded font-bold hover:bg-yellow-600">
-            Update Hotel
+          <button 
+            onClick={() => navigate(-1)}
+            className="text-slate-300 hover:text-white transition text-sm font-medium flex items-center gap-2"
+          >
+            ✕ Cancel
           </button>
+        </div>
+        
+        <form onSubmit={handleSubmit} className="p-8">
+          <div className="space-y-8">
+            
+            {/* SECTION 1: CORE DETAILS */}
+            <div>
+               <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-6 border-b border-slate-100 pb-2">Property Details</h3>
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                 
+                 {/* Name */}
+                 <div className="col-span-2">
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Hotel Name</label>
+                    <input type="text" name="name" value={formData.name} onChange={handleChange} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none transition-all" />
+                 </div>
+
+                 {/* Location */}
+                 <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Location</label>
+                    <div className="relative">
+                        <span className="absolute left-3 top-3 text-slate-400">📍</span>
+                        <input type="text" name="location" value={formData.location} onChange={handleChange} className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none transition-all" />
+                    </div>
+                 </div>
+
+                 {/* Price */}
+                 <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Price (LKR)</label>
+                    <div className="relative">
+                        <span className="absolute left-3 top-3 text-slate-400 font-bold text-xs">Rs</span>
+                        <input type="number" name="pricePerNight" value={formData.pricePerNight} onChange={handleChange} className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none transition-all" />
+                    </div>
+                 </div>
+               </div>
+            </div>
+
+            {/* SECTION 2: MAP & DESCRIPTION */}
+            <div>
+               <div className="mb-6">
+                 <label className="block text-sm font-medium text-slate-700 mb-2">Description</label>
+                 <textarea name="description" rows="4" value={formData.description} onChange={handleChange} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none transition-all resize-none"></textarea>
+               </div>
+
+               <div className="mb-6">
+                 <label className="block text-sm font-medium text-slate-700 mb-2">Google Maps Embed URL</label>
+                 <div className="bg-blue-50 border-l-4 border-blue-600 p-4 rounded-r-lg mb-3">
+                    <p className="text-sm text-blue-800">Ensure this is the <strong>src="..."</strong> link from the Google Embed code.</p>
+                 </div>
+                 <input type="text" name="mapUrl" value={formData.mapUrl} onChange={handleChange} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none transition-all text-sm font-mono text-slate-600" />
+               </div>
+            </div>
+
+            {/* SECTION 3: IMAGE UPDATE */}
+            <div>
+               <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-6 border-b border-slate-100 pb-2">Property Image</h3>
+               
+               {/* Current/New Image Preview */}
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                  
+                  {/* Upload Area */}
+                  <div
+                    onDragOver={onDragOver}
+                    onDragLeave={onDragLeave}
+                    onDrop={onDrop}
+                    className={`relative group border-2 border-dashed rounded-xl h-48 flex flex-col items-center justify-center transition-all cursor-pointer
+                        ${isDragging ? 'border-indigo-500 bg-indigo-50' : 'border-slate-300 hover:border-slate-400 hover:bg-slate-50'}`}
+                    >
+                    <div className="bg-white p-3 rounded-full shadow-sm mb-3 group-hover:scale-110 transition-transform">
+                        <svg className="w-6 h-6 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    </div>
+                    <p className="text-slate-900 font-medium text-sm">Click to change image</p>
+                    <input type="file" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onChange={onFileSelect} />
+                  </div>
+
+                  {/* Preview Area */}
+                  <div className="relative h-48 w-full rounded-xl overflow-hidden shadow-sm border border-slate-200">
+                    {formData.image ? (
+                        <>
+                           <img src={getImageUrl(formData.image)} alt="Preview" className="w-full h-full object-cover" />
+                           <div className="absolute top-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded">
+                             {uploading ? "Uploading..." : "Current Preview"}
+                           </div>
+                        </>
+                    ) : (
+                        <div className="flex items-center justify-center h-full bg-slate-50 text-slate-400">No Image</div>
+                    )}
+                    
+                    {uploading && (
+                      <div className="absolute inset-0 bg-slate-900/80 flex flex-col items-center justify-center text-white backdrop-blur">
+                        <div className="animate-spin rounded-full h-8 w-8 border-2 border-white border-t-transparent mb-2"></div>
+                      </div>
+                    )}
+                  </div>
+               </div>
+            </div>
+
+            {/* ACTION BAR */}
+            <div className="mt-8 pt-6 border-t border-slate-100 flex justify-end gap-4">
+                <button
+                    type="button"
+                    onClick={() => navigate(-1)}
+                    className="px-6 py-3 rounded-lg text-slate-600 font-medium hover:bg-slate-50 transition"
+                >
+                    Cancel
+                </button>
+                <button
+                    type="submit"
+                    disabled={uploading}
+                    className={`px-8 py-3 rounded-lg font-bold text-white shadow-md transition-all
+                    ${uploading 
+                        ? 'bg-slate-400 cursor-not-allowed' 
+                        : 'bg-slate-900 hover:bg-slate-800 hover:shadow-lg active:transform active:scale-95'
+                    }`}
+                >
+                    {uploading ? 'Processing...' : 'Save Changes'}
+                </button>
+            </div>
+
+          </div>
         </form>
       </div>
     </div>

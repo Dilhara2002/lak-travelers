@@ -5,6 +5,7 @@ const reviewSchema = mongoose.Schema({
   name: { type: String, required: true },   // Review දාපු කෙනාගේ නම
   rating: { type: Number, required: true }, // දුන්න තරු ගණන (1-5)
   comment: { type: String, required: true }, // Comment එක
+  image: { type: String },
   user: {
     type: mongoose.Schema.Types.ObjectId,
     required: true,
@@ -26,6 +27,7 @@ const hotelSchema = mongoose.Schema({
   description: { type: String, required: true },
   pricePerNight: { type: Number, required: true },
   image: { type: String },
+  mapUrl: { type: String, required: true },
   
   // 👇 අලුතින් එකතු කළ කොටස්
   reviews: [reviewSchema], // Reviews List එකක්

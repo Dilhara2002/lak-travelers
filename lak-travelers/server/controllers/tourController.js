@@ -125,10 +125,50 @@ const updateTour = asyncHandler(async (req, res) => {
   }
 });
 
+// @desc    Create new review
+// @route   POST /api/tours/:id/reviews
+// @access  Private
+const createTourReview = asyncHandler(async (req, res) => {
+  const { rating, comment, image } = req.body;
+  const tour = await Tour.findById(req.params.id);
+
+  if (tour) {
+    const alreadyReviewed = tour.reviews.find(
+      (r) => r.user.toString() === req.user._id.toString()
+    );
+
+    if (alreadyReviewed) {
+      res.status(400);
+      throw new Error('You have already reviewed this tour');
+    }
+
+    const review = {
+      name: req.user.name,
+      rating: Number(rating),
+      comment,
+      image,
+      user: req.user._id,
+    };
+
+    tour.reviews.push(review);
+    tour.numReviews = tour.reviews.length;
+    tour.rating =
+      tour.reviews.reduce((acc, item) => item.rating + acc, 0) /
+      tour.reviews.length;
+
+    await tour.save();
+    res.status(201).json({ message: 'Review added' });
+  } else {
+    res.status(404);
+    throw new Error('Tour not found');
+  }
+});
+
 export {
   getTours,
   getTourById,
   createTour,
   deleteTour,
   updateTour,
+  createTourReview,
 };
