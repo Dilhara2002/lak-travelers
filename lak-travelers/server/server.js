@@ -48,5 +48,5 @@ app.use('/uploads', express.static(path.join(__dirname, '/uploads')));
 app.use(notFound);
 app.use(errorHandler);
 
-const port = process.env.PORT || 5001;
-app.listen(port, () => console.log(`🚀 Server running on port ${port}`));
+const PORT = process.env.PORT || 5001; // Render එක දෙන Port එක හෝ 5001 ගන්න
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
