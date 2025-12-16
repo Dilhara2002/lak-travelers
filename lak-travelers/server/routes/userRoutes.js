@@ -4,16 +4,39 @@ import {
   registerUser,
   logoutUser,
 } from '../controllers/authController.js';
+import {
+  getUserProfile,
+  updateUserProfile,
+} from '../controllers/userController.js';
+import { protect } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-// Register වෙන පාර (POST /api/users)
+/*
+|--------------------------------------------------------------------------
+| Auth Routes
+|--------------------------------------------------------------------------
+*/
+
+// Register (POST /api/users)
 router.post('/', registerUser);
 
-// Login වෙන පාර (POST /api/users/auth)
+// Login (POST /api/users/auth)
 router.post('/auth', authUser);
 
-// Logout වෙන පාර (POST /api/users/logout)
+// Logout (POST /api/users/logout)
 router.post('/logout', logoutUser);
+
+/*
+|--------------------------------------------------------------------------
+| Profile Routes
+|--------------------------------------------------------------------------
+*/
+
+// View & Update Profile (GET, PUT /api/users/profile)
+router
+  .route('/profile')
+  .get(protect, getUserProfile)
+  .put(protect, updateUserProfile);
 
 export default router;

@@ -5,6 +5,8 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import path from 'path';
 import bookingRoutes from './routes/bookingRoutes.js';
+import tourRoutes from './routes/tourRoutes.js';
+import vehicleRoutes from './routes/vehicleRoutes.js';
 
 // Routes සහ Middleware import කරගැනීම
 import uploadRoutes from './routes/uploadRoutes.js';
@@ -38,8 +40,10 @@ app.use(morgan('dev'));
 // 👇 3. Routes
 app.use('/api/users', userRoutes);
 app.use('/api/hotels', hotelRoutes);
+app.use('/api/tours', tourRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/bookings', bookingRoutes);
+app.use('/api/vehicles', vehicleRoutes);
 
 // 👇 4. Static Folder (Uploads ෆෝල්ඩර් එක Public කිරීම)
 // path.resolve() මගින් වත්මන් ෆෝල්ඩරය සොයාගනී
@@ -54,5 +58,7 @@ app.get('/', (req, res) => {
 // 👇 5. Error Handling
 app.use(notFound);
 app.use(errorHandler);
+
+
 
 export default app;

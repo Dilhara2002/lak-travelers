@@ -7,6 +7,17 @@ import HotelList from "./pages/HotelList";
 import AddHotel from "./pages/AddHotel";
 import HotelDetails from "./pages/HotelDetails";
 import MyBookings from "./pages/MyBookings";
+import EditHotel from "./pages/EditHotel";
+import UserProfile from "./pages/UserProfile";
+import TourList from "./pages/TourList";
+import AddTour from "./pages/AddTour";
+import TourDetails from "./pages/TourDetails";
+import VehicleList from "./pages/VehicleList";
+import AddVehicle from "./pages/AddVehicle";
+import VehicleDetails from "./pages/VehicleDetails";
+import Footer from "./components/Footer";
+import Dashboard from "./pages/Dashboard";
+import EditTour from "./pages/EditTour";
 
 function App() {
   return (
@@ -21,8 +32,19 @@ function App() {
           <Route path="/add-hotel" element={<AddHotel />} />
           <Route path="/hotels/:id" element={<HotelDetails />} />
           <Route path="/my-bookings" element={<MyBookings />} />
+          <Route path="/edit-hotel/:id" element={<EditHotel />} />
+          <Route path="/profile" element={<UserProfile />} />
+          <Route path="/tours" element={<TourList />} />
+          <Route path="/add-tour" element={<AddTour />} />
+          <Route path="/tours/:id" element={<TourDetails />} />
+          <Route path="/vehicles" element={<VehicleList />} />
+          <Route path="/add-vehicle" element={<AddVehicle />} />
+          <Route path="/vehicles/:id" element={<VehicleDetails />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/edit-tour/:id" element={<EditTour />} />
         </Routes>
       </div>
+      <Footer />
     </Router>
   );
 }

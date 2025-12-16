@@ -4,25 +4,35 @@ const bookingSchema = mongoose.Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,
     required: true,
-    ref: 'User', // User කෙනෙක්ට සම්බන්ධයි
+    ref: 'User',
   },
-  hotel: {
-    type: mongoose.Schema.Types.ObjectId,
+  
+  // Hotel, Tour, or Vehicle
+  hotel: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel' },
+  tour: { type: mongoose.Schema.Types.ObjectId, ref: 'Tour' },
+  vehicle: { type: mongoose.Schema.Types.ObjectId, ref: 'Vehicle' }, // 👈 New Field
+
+  // Booking Type
+  bookingType: {
+    type: String,
     required: true,
-    ref: 'Hotel', // Hotel එකකට සම්බන්ධයි
+    enum: ['hotel', 'tour', 'vehicle'], // 👈 'vehicle' added
+    default: 'hotel',
   },
-  checkInDate: {
-    type: Date,
-    required: true,
-  },
-  checkOutDate: {
-    type: Date,
-    required: true,
-  },
+
+  // Dates & Details
+  checkInDate: { type: String },  // Hotel
+  checkOutDate: { type: String }, // Hotel
+  
+  tourDate: { type: String },     // Tour
+  peopleCount: { type: Number },  // Tour
+  
+  pickupDate: { type: String },   // Vehicle 👈 New
+  pickupLocation: { type: String }, // Vehicle 👈 New
+
 }, {
-  timestamps: true, // booking එක දාපු වෙලාව save වෙනවා
+  timestamps: true,
 });
 
 const Booking = mongoose.model('Booking', bookingSchema);
-
 export default Booking;
