@@ -20,15 +20,20 @@ import uploadRoutes from './routes/uploadRoutes.js';
 dotenv.config();
 connectDB();
 
-// 2. App Initialize (මුලින්ම කරන්න ඕනේ මේකයි)
+// 2. App Initialize
 const app = express();
 
-// 3. Middleware Setup
-// Vercel එකේ deploy කරනකොට Frontend URL එක හරියටම දෙන්න ඕනේ.
-// දැනට '*' දැම්මොත් ඕනෑම තැනක ඉඳන් Access කරන්න පුළුවන් (ලේසියි).
+// 3. Middleware Setup (UPDATED CORS) 🔒
+// මෙතන ඔබේ අලුත් Frontend Link එක දැම්මා.
+const allowedOrigins = [
+  "http://localhost:5173",                 // Localhost සඳහා
+  "https://lak-travelers-z1uk.vercel.app"  // Live Website සඳහා (අගට / නැතුව)
+];
+
 app.use(cors({ 
-  origin: ["http://localhost:5173", "https://your-frontend-url.vercel.app"], 
-  credentials: true 
+  origin: allowedOrigins, 
+  credentials: true, // Cookies හුවමාරු කරගැනීමට මෙය අනිවාර්යයි
+  methods: ["GET", "POST", "PUT", "DELETE"]
 }));
 
 app.use(express.json());
@@ -51,7 +56,7 @@ app.use('/api/bookings', bookingRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/upload', uploadRoutes);
 
-// 7. Root Route (Home Page Error එක නැති කරන්න)
+// 7. Root Route
 app.get('/', (req, res) => {
   res.send('API is running successfully! 🚀');
 });
@@ -60,7 +65,7 @@ app.get('/', (req, res) => {
 app.use(notFound);
 app.use(errorHandler);
 
-// 9. Server Start (Vercel සඳහා export කිරීම අනිවාර්යයි)
+// 9. Server Start
 const PORT = process.env.PORT || 5001;
 
 // Vercel එකේදි server එක start කරන්න එපා, local දුවද්දී විතරක් start කරන්න
@@ -68,4 +73,5 @@ if (process.env.NODE_ENV !== 'production') {
     app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 }
 
+// Vercel සඳහා export කිරීම
 export default app;
