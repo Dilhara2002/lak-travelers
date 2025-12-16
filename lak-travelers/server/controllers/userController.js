@@ -27,7 +27,9 @@ const registerUser = asyncHandler(async (req, res) => {
 
     if (user) {
       console.log("✅ User Created:", user._id); // Debug Log
+      // මෙතනදී අපි අර utils ෆයිල් එකේ හදපු ආරක්ෂිත cookie එක හදන function එක call කරනවා
       generateToken(res, user._id);
+      
       res.status(201).json({
         _id: user._id,
         name: user.name,
@@ -54,7 +56,9 @@ const authUser = asyncHandler(async (req, res) => {
   const user = await User.findOne({ email });
 
   if (user && (await user.matchPassword(password))) {
+    // Login වන විටත් ආරක්ෂිත cookie එක සාදයි
     generateToken(res, user._id);
+    
     res.json({
       _id: user._id,
       name: user.name,
@@ -71,10 +75,14 @@ const authUser = asyncHandler(async (req, res) => {
 // @route   POST /api/users/logout
 // @access  Public
 const logoutUser = (req, res) => {
+  // Logout වීමේදී Cookie එක Clear කිරීමට නම්, එය සෑදූ ආකාරයටම (Secure, SameSite) settings තිබිය යුතුය.
   res.cookie('jwt', '', {
     httpOnly: true,
     expires: new Date(0),
+    secure: process.env.NODE_ENV !== 'development', // Production එකේදී True
+    sameSite: process.env.NODE_ENV !== 'development' ? 'none' : 'strict',
   });
+  
   res.status(200).json({ message: 'Logged out successfully' });
 };
 
@@ -125,7 +133,6 @@ const updateUserProfile = asyncHandler(async (req, res) => {
   }
 });
 
-// ඔයාගේ Error එක ආවේ මෙතන authUser නැති නිසා. දැන් ඔක්කොම තියෙනවා.
 export {
   authUser,
   registerUser,

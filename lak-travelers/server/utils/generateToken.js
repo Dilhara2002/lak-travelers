@@ -1,17 +1,17 @@
 import jwt from 'jsonwebtoken';
 
 const generateToken = (res, userId) => {
-  // Token එක හදනවා (UserId එක ඇතුළත් කරලා)
   const token = jwt.sign({ userId }, process.env.JWT_SECRET, {
-    expiresIn: '30d', // දවස් 30ක් වලංගුයි
+    expiresIn: '30d',
   });
 
-  // Token එක HTTP-Only Cookie එකක් විදියට save කරනවා (වැඩි ආරක්ෂාවට)
+  // Vercel (Production) සහ Localhost (Development) දෙකටම ගැලපෙන විදියට Cookie Settings
+  // Production හිදී Secure: true සහ SameSite: none අනිවාර්ය වේ.
   res.cookie('jwt', token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV !== 'development', // Production එකේදි විතරක් secure (https)
-    sameSite: 'strict',
-    maxAge: 30 * 24 * 60 * 60 * 1000, // දවස් 30 milliseconds වලින්
+    secure: process.env.NODE_ENV !== 'development', // Production එකේදී True වෙයි
+    sameSite: process.env.NODE_ENV !== 'development' ? 'none' : 'strict', // Cross-site සඳහා 'none'
+    maxAge: 30 * 24 * 60 * 60 * 1000, // දවස් 30
   });
 };
 
