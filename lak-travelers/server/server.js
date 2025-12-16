@@ -50,3 +50,6 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5001; // Render එක දෙන Port එක හෝ 5001 ගන්න
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+
+export default app;
