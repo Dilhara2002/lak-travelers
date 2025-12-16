@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Backend එකේ ලිපිනය (URL)
 const API = axios.create({
-  baseURL: 'http://localhost:5001/api', 
+  baseURL: 'https://lak-travelers-oqpg.vercel.app/api', 
   withCredentials: true, // Cookies වැඩ කරන්න මේක ඕනේ
 });
 
