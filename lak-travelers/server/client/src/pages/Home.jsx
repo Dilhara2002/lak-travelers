@@ -31,8 +31,8 @@ const Home = () => {
   // 👇 ලියාපදිංචි වූ පරිශීලකයින් සඳහා පෙන්වන කොටස (LOGIN USER UI)
   // ============================================================
   const LoggedInUI = () => (
-    <div className="bg-slate-50 min-h-screen font-sans text-slate-800 mt-[-96px]">
-      <div className="relative h-[650px] lg:h-[800px] flex items-center justify-center px-4 overflow-hidden">
+    <div className="bg-slate-50 min-h-screen font-sans text-slate-800 mt-[-20px]">
+      <div className="relative h-[650px] lg:h-[800px] flex items-center justify-center px-50 overflow-hidden">
         <div className="absolute inset-0">
           {heroImages.map((imgUrl, index) => (
             <img
@@ -49,7 +49,7 @@ const Home = () => {
         <div className="relative z-20 max-w-5xl w-full text-center text-white space-y-8 animate-fade-in-up px-2 md:px-0 mt-20">
           <div className="inline-block">
             <span className="uppercase tracking-[0.2em] text-xs md:text-sm font-bold bg-white/10 px-6 py-2 rounded-full backdrop-blur-md border border-white/20 shadow-lg">
-              Welcome back, {user?.name} 🌴
+              WELCOME TO PARADISE
             </span>
           </div>
           <h1 className="text-5xl sm:text-6xl md:text-8xl font-black tracking-tight drop-shadow-2xl leading-[1.1]">
@@ -66,7 +66,7 @@ const Home = () => {
                 <svg className="w-6 h-6 text-white/70 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                 <input type="text" placeholder="Where to next?" className="w-full bg-transparent text-white placeholder-white/70 py-4 outline-none text-lg font-medium" />
             </div>
-            <Link to="/hotels" className="w-full sm:w-auto bg-yellow-400 hover:bg-yellow-500 text-slate-900 px-10 py-4 rounded-2xl font-bold transition shadow-lg flex items-center justify-center gap-2">
+            <Link to="/hotels" className="w-full sm:w-auto bg-yellow-400 hover:bg-yellow-500 text-slate-900 px-10 py-4 rounded-3xl font-bold transition shadow-lg flex items-center justify-center gap-2">
               Explore
             </Link>
           </div>

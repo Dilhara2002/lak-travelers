@@ -23,39 +23,28 @@ connectDB();
 // 2. App Initialize
 const app = express();
 
-// 3. Middleware Setup (UPDATED CORS) 🔒
-// මෙතන ඔබේ Frontend URL එක සහ localhost දෙකම ඇතුලත් කර ඇත.
-const allowedOrigins = [
-  "http://localhost:5173",                 // Local Development
-  "https://lak-travelers-z1uk.vercel.app", // Your Vercel Frontend (From Screenshot)
-  "https://lak-travelers.vercel.app"       // Main Vercel Domain (Just in case)
-];
-
+// 3. Middleware Setup (FIXED CORS FOR 401 ERRORS) 🔒
+// 401 Unauthorized දෝෂය මගහරවා ගැනීමට origin සැකසුම මෙසේ සරල කරන්න
 app.use(cors({ 
-  origin: (origin, callback) => {
-    // Mobile Apps හෝ Postman වැනි tools වලින් එන ඉල්ලීම් (origin නැති) භාරගන්න
-    if (!origin) return callback(null, true);
-    
-    if (allowedOrigins.indexOf(origin) === -1) {
-      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
-      return callback(new Error(msg), false);
-    }
-    return callback(null, true);
-  },
-  credentials: true, // Cookies හුවමාරු කරගැනීමට මෙය අනිවාර්යයි
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+  origin: [
+    "http://localhost:5173",                 // Local Development
+    "https://lak-travelers-z1uk.vercel.app", // Your Vercel Frontend
+    "https://lak-travelers.vercel.app"       // Alternative Vercel Domain
+  ],
+  credentials: true, // Cookies (JWT) හුවමාරු කරගැනීමට මෙය අනිවාර්යයි
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "Set-Cookie"]
 }));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(cookieParser());
+app.use(cookieParser()); // Cookies කියවීම සඳහා මෙය අත්‍යවශ්‍යයි
 
 // 4. Static Path Setup
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // 5. Image Uploads Folder (Static)
-// සටහන: Vercel හිදී මෙය වැඩ කරන්නේ තාවකාලිකව පමණි. 
 app.use('/uploads', express.static(path.join(__dirname, '/uploads')));
 
 // 6. API Routes
@@ -65,7 +54,7 @@ app.use('/api/tours', tourRoutes);
 app.use('/api/vehicles', vehicleRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/admin', adminRoutes);
-app.use('/api/upload', uploadRoutes); // 👈 මෙය තිබීම අනිවාර්යයි (404 එන්නේ මෙය නැති වුවහොත්ය)
+app.use('/api/upload', uploadRoutes);
 
 // 7. Root Route
 app.get('/', (req, res) => {

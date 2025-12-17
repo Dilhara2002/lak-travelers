@@ -8,10 +8,7 @@ const Navbar = () => {
   const location = useLocation();
   const user = JSON.parse(localStorage.getItem("userInfo"));
   
-  // State for Desktop Profile Dropdown
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  
-  // 👇 State for Mobile Menu (Hamburger)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const handleLogout = async () => {
@@ -28,14 +25,14 @@ const Navbar = () => {
 
   const closeDropdown = () => {
     setIsDropdownOpen(false);
-    setIsMobileMenuOpen(false); // Close mobile menu on click too
+    setIsMobileMenuOpen(false);
   };
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 border-b border-gray-100 bg-white/90 backdrop-blur-md shadow-sm transition-all duration-300">
-      <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto flex h-20 max-w-full items-center px-6 sm:px-10 lg:px-16">
         
-        {/* BRAND LOGO */}
+        {/* BRAND LOGO - FLUSH LEFT */}
         <Link to="/" className="flex items-center gap-3 group z-50">
           <div className="h-10 w-10 md:h-12 md:w-12 overflow-hidden rounded-full border border-gray-100 shadow-sm group-hover:shadow-md transition">
             <img 
@@ -56,8 +53,9 @@ const Navbar = () => {
           </div>
         </Link>
 
-        {/* ---------------- DESKTOP NAV LINKS (Hidden on Mobile) ---------------- */}
-        <div className="hidden md:flex items-center space-x-8">
+        {/* ---------------- 👇 NAV LINKS - PUSHED TO THE RIGHT ---------------- */}
+        {/* ml-auto භාවිතා කර මෙම කොටස දකුණට තල්ලු කර ඇත */}
+        <div className="hidden md:flex items-center space-x-10 ml-auto mr-12">
           {["Home", "Hotels", "Tours", "Vehicles"].map((item) => {
             const path = item === "Home" ? "/" : `/${item.toLowerCase()}`;
             const isActive = location.pathname === path;
@@ -81,11 +79,9 @@ const Navbar = () => {
           })}
         </div>
 
-        {/* ---------------- RIGHT SIDE (Auth + Mobile Toggle) ---------------- */}
+        {/* ---------------- RIGHT SIDE (Auth/Profile) - FLUSH RIGHT ---------------- */}
         <div className="flex items-center gap-3">
-          
           {user ? (
-            // ✅ USER LOGGED IN (Show Avatar on both Desktop & Mobile)
             <div className="relative">
               <button
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
@@ -94,8 +90,7 @@ const Navbar = () => {
                 <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-600 text-white font-bold text-sm shadow-sm">
                   {user.name.charAt(0).toUpperCase()}
                 </div>
-                {/* Hide name on small mobile, show on larger screens */}
-                <span className="hidden sm:block text-sm font-bold text-gray-700 max-w-[100px] truncate">{user.name}</span>
+                <span className="hidden sm:block text-sm font-bold text-gray-700 max-w-[120px] truncate">{user.name}</span>
                 <svg 
                   xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" 
                   className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${isDropdownOpen ? "rotate-180" : ""}`}
@@ -107,102 +102,54 @@ const Navbar = () => {
               {isDropdownOpen && (
                 <>
                   <div className="fixed inset-0 z-10" onClick={() => setIsDropdownOpen(false)} />
-                  <div className="absolute right-0 z-20 mt-3 w-64 origin-top-right rounded-xl border border-gray-100 bg-white shadow-xl ring-1 ring-black/5 animate-fade-in-up overflow-hidden">
+                  <div className="absolute right-0 z-20 mt-3 w-64 origin-top-right rounded-xl border border-gray-100 bg-white shadow-xl ring-1 ring-black/5 overflow-hidden">
                     <div className="bg-gray-50 px-4 py-3 border-b border-gray-100">
                       <p className="text-sm font-bold text-gray-900 truncate">{user.name}</p>
                       <p className="text-xs text-blue-600 font-semibold uppercase tracking-wide mt-0.5">{user.role}</p>
-                      <p className="text-xs text-gray-400 truncate mt-0.5">{user.email}</p>
                     </div>
                     <div className="p-2">
                       {(user.role === "vendor" || user.role === "admin") && (
-                        <Link to="/dashboard" onClick={closeDropdown} className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition">
-                           Dashboard
-                        </Link>
+                        <Link to="/dashboard" onClick={closeDropdown} className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition">Dashboard</Link>
                       )}
                       {user.role === "user" && (
-                        <Link to="/my-bookings" onClick={closeDropdown} className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition">
-                           My Bookings
-                        </Link>
+                        <Link to="/my-bookings" onClick={closeDropdown} className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition">My Bookings</Link>
                       )}
-                      <Link to="/profile" onClick={closeDropdown} className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition">
-                         My Profile
-                      </Link>
+                      <Link to="/profile" onClick={closeDropdown} className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition">My Profile</Link>
                       <div className="my-1 h-px bg-gray-100" />
-                      <button onClick={handleLogout} className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-red-500 hover:bg-red-50 transition">
-                         Logout
-                      </button>
+                      <button onClick={handleLogout} className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-red-500 hover:bg-red-50 transition text-left">Logout</button>
                     </div>
                   </div>
                 </>
               )}
             </div>
           ) : (
-            // ❌ USER LOGGED OUT
-            // On Desktop: Show Buttons. On Mobile: Hide them (move to menu)
-            <div className="hidden md:flex items-center gap-3">
-              <Link to="/login" className="rounded-full px-5 py-2 text-sm font-bold text-gray-600 hover:text-blue-600 transition">Log In</Link>
-              <Link to="/register" className="rounded-full bg-blue-600 px-6 py-2.5 text-sm font-bold text-white shadow-md hover:bg-blue-700 hover:shadow-lg transition-transform hover:-translate-y-0.5">Sign Up</Link>
+            <div className="hidden md:flex items-center gap-4">
+              <Link to="/login" className="text-sm font-bold text-gray-600 hover:text-blue-600 transition">Log In</Link>
+              <Link to="/register" className="rounded-full bg-blue-600 px-7 py-3 text-sm font-bold text-white shadow-md hover:bg-blue-700 hover:shadow-lg transition-all hover:-translate-y-0.5">Sign Up</Link>
             </div>
           )}
 
-          {/* 👇 MOBILE MENU BUTTON (Hamburger) */}
+          {/* MOBILE HAMBURGER */}
           <button 
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="md:hidden p-2 rounded-lg text-gray-600 hover:bg-gray-100 focus:outline-none transition"
+            className="md:hidden p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition"
           >
             {isMobileMenuOpen ? (
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
             ) : (
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
-              </svg>
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" /></svg>
             )}
           </button>
         </div>
       </div>
 
-      {/* ---------------- MOBILE MENU DROPDOWN ---------------- */}
+      {/* MOBILE MENU */}
       {isMobileMenuOpen && (
-        <div className="md:hidden border-t border-gray-100 bg-white px-4 pt-4 pb-6 shadow-lg animate-fade-in-down">
+        <div className="md:hidden border-t border-gray-100 bg-white px-4 pt-4 pb-6 shadow-lg">
           <div className="flex flex-col space-y-4">
-            {["Home", "Hotels", "Tours", "Vehicles"].map((item) => {
-              const path = item === "Home" ? "/" : `/${item.toLowerCase()}`;
-              const isActive = location.pathname === path;
-              return (
-                <Link
-                  key={item}
-                  to={path}
-                  onClick={closeDropdown}
-                  className={`text-lg font-bold px-4 py-2 rounded-lg transition-colors ${
-                    isActive ? "bg-blue-50 text-blue-600" : "text-gray-600 hover:bg-gray-50"
-                  }`}
-                >
-                  {item}
-                </Link>
-              );
-            })}
-
-            {/* Mobile Auth Buttons (Only if logged out) */}
-            {!user && (
-              <div className="mt-4 flex flex-col gap-3 border-t border-gray-100 pt-4 px-2">
-                <Link 
-                  to="/login" 
-                  onClick={closeDropdown}
-                  className="w-full text-center rounded-xl border border-gray-200 py-3 text-sm font-bold text-gray-700 hover:bg-gray-50"
-                >
-                  Log In
-                </Link>
-                <Link 
-                  to="/register" 
-                  onClick={closeDropdown}
-                  className="w-full text-center rounded-xl bg-blue-600 py-3 text-sm font-bold text-white shadow-md hover:bg-blue-700"
-                >
-                  Sign Up
-                </Link>
-              </div>
-            )}
+            {["Home", "Hotels", "Tours", "Vehicles"].map((item) => (
+              <Link key={item} to={item === "Home" ? "/" : `/${item.toLowerCase()}`} onClick={closeDropdown} className="text-lg font-bold px-4 py-2 rounded-lg text-gray-600 hover:bg-gray-50">{item}</Link>
+            ))}
           </div>
         </div>
       )}

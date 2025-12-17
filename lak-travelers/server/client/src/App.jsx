@@ -69,6 +69,7 @@ function App() {
             <Route path="/vehicles/:id" element={<VehicleDetails />} />
             <Route path="/add-vehicle" element={<AddVehicle />} />
             <Route path="/vendor-setup" element={<VendorSetup />} />
+            
           </Routes>
         </main>
 

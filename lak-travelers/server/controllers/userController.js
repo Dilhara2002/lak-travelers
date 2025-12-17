@@ -22,15 +22,21 @@ const registerUser = asyncHandler(async (req, res) => {
     role: role || 'user',
   });
 
-  generateToken(res, user._id);
+  if (user) {
+    // 👇 Token එක සාදා Cookie එකක් ලෙස යැවීම
+    generateToken(res, user._id);
 
-  res.status(201).json({
-    _id: user._id,
-    name: user.name,
-    email: user.email,
-    role: user.role,
-    isApproved: user.isApproved,
-  });
+    res.status(201).json({
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      isApproved: user.isApproved,
+    });
+  } else {
+    res.status(400);
+    throw new Error('Invalid user data');
+  }
 });
 
 /* ===============================
@@ -43,6 +49,7 @@ const authUser = asyncHandler(async (req, res) => {
   const user = await User.findOne({ email });
 
   if (user && (await user.matchPassword(password))) {
+    // 👇 Token එක සාදා Cookie එකක් ලෙස යැවීම
     generateToken(res, user._id);
 
     res.json({
@@ -63,11 +70,12 @@ const authUser = asyncHandler(async (req, res) => {
    POST /api/users/logout
 ================================ */
 const logoutUser = asyncHandler(async (req, res) => {
+  // 👇 Cookie එක ඉවත් කිරීමේදීත් Security settings නිවැරදි විය යුතුයි
   res.cookie('jwt', '', {
     httpOnly: true,
     expires: new Date(0),
-    secure: process.env.NODE_ENV !== 'development',
-    sameSite: process.env.NODE_ENV !== 'development' ? 'none' : 'strict',
+    secure: true,       // Production/Vercel සඳහා සැමවිටම true
+    sameSite: 'none',   // Cross-site cookie ඉවත් කිරීමට අනිවාර්යයි
   });
 
   res.status(200).json({ message: 'Logged out successfully' });
@@ -78,6 +86,7 @@ const logoutUser = asyncHandler(async (req, res) => {
    GET /api/users/profile
 ================================ */
 const getUserProfile = asyncHandler(async (req, res) => {
+  // Middleware එක හරහා එන req.user._id භාවිතා කර පරිශීලකයා සෙවීම
   const user = await User.findById(req.user._id);
 
   if (!user) {
@@ -108,7 +117,11 @@ const updateUserProfile = asyncHandler(async (req, res) => {
   }
 
   user.name = req.body.name || user.name;
-  user.email = req.body.email || user.email;
+  
+  // Email එක වෙනස් කිරීමට අවශ්‍ය නම් පමණක් මෙය භාවිතා කරන්න
+  if (req.body.email) {
+      user.email = req.body.email;
+  }
 
   if (req.body.password) {
     user.password = req.body.password;
@@ -128,7 +141,6 @@ const updateUserProfile = asyncHandler(async (req, res) => {
 /* ===============================
    Update Vendor Profile
    PUT /api/users/vendor-profile
-   (Vendor Only)
 ================================ */
 const updateVendorProfile = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id);
@@ -140,29 +152,26 @@ const updateVendorProfile = asyncHandler(async (req, res) => {
 
   user.vendorDetails = {
     ...user.vendorDetails,
-
-    // Basic Info
     businessName: req.body.businessName || user.vendorDetails?.businessName,
     serviceType: req.body.serviceType || user.vendorDetails?.serviceType,
-    registrationNumber:
-      req.body.registrationNumber || user.vendorDetails?.registrationNumber,
+    registrationNumber: req.body.registrationNumber || user.vendorDetails?.registrationNumber,
     phone: req.body.phone || user.vendorDetails?.phone,
     address: req.body.address || user.vendorDetails?.address,
     description: req.body.description || user.vendorDetails?.description,
 
-    // Specific Vendor Info
     specificDetails: {
-      hotelStarRating: req.body.hotelStarRating,
-      vehicleFleetSize: req.body.vehicleFleetSize,
-      guideLanguages: req.body.guideLanguages,
-      experienceYears: req.body.experienceYears,
+      ...user.vendorDetails?.specificDetails,
+      hotelStarRating: req.body.hotelStarRating || user.vendorDetails?.specificDetails?.hotelStarRating,
+      vehicleFleetSize: req.body.vehicleFleetSize || user.vendorDetails?.specificDetails?.vehicleFleetSize,
+      guideLanguages: req.body.guideLanguages || user.vendorDetails?.specificDetails?.guideLanguages,
+      experienceYears: req.body.experienceYears || user.vendorDetails?.specificDetails?.experienceYears,
     },
 
-    // Documents
     documents: {
-      profileImage: req.body.profileImage,
-      idFront: req.body.idFront,
-      idBack: req.body.idBack,
+      ...user.vendorDetails?.documents,
+      profileImage: req.body.profileImage || user.vendorDetails?.documents?.profileImage,
+      idFront: req.body.idFront || user.vendorDetails?.documents?.idFront,
+      idBack: req.body.idBack || user.vendorDetails?.documents?.idBack,
     },
   };
 
@@ -178,18 +187,14 @@ const updateVendorProfile = asyncHandler(async (req, res) => {
   });
 });
 
-// @desc    Get all pending vendors (Admin only)
-// @route   GET /api/users/pending
-// @access  Private/Admin
+/* ===============================
+   Admin Functions
+================================ */
 const getPendingVendors = asyncHandler(async (req, res) => {
-  // role එක 'vendor' සහ isApproved 'false' අය පමණක් සොයන්න
   const vendors = await User.find({ role: 'vendor', isApproved: false }).select('-password');
   res.json(vendors);
 });
 
-// @desc    Approve a vendor
-// @route   PUT /api/users/approve/:id
-// @access  Private/Admin
 const approveVendor = asyncHandler(async (req, res) => {
   const user = await User.findById(req.params.id);
 
@@ -210,6 +215,6 @@ export {
   getUserProfile,
   updateUserProfile,
   updateVendorProfile,
-  getPendingVendors, // 👈 New
+  getPendingVendors,
   approveVendor,
 };

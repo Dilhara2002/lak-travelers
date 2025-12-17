@@ -5,13 +5,13 @@ const generateToken = (res, userId) => {
     expiresIn: '30d',
   });
 
-  // Vercel (Production) සහ Localhost (Development) දෙකටම ගැලපෙන විදියට Cookie Settings
-  // Production හිදී Secure: true සහ SameSite: none අනිවාර්ය වේ.
+  // 👇 මෙම සැකසුම් (Settings) ඉතා වැදගත් වේ
   res.cookie('jwt', token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV !== 'development', // Production එකේදී True වෙයි
-    sameSite: process.env.NODE_ENV !== 'development' ? 'none' : 'strict', // Cross-site සඳහා 'none'
-    maxAge: 30 * 24 * 60 * 60 * 1000, // දවස් 30
+    secure: true,        // 👈 HTTPS හරහා පමණක් යැවීමට (Vercel සඳහා අනිවාර්යයි)
+    sameSite: 'none',    // 👈 Domain දෙකක් අතර Cookies හුවමාරුවට (අනිවාර්යයි)
+    maxAge: 30 * 24 * 60 * 60 * 1000, 
+    path: '/',           // මුළු සයිට් එකේම Cookie එක වැඩ කිරීමට
   });
 };
 
