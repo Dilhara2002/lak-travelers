@@ -4,13 +4,15 @@ import multer from 'multer';
 
 const router = express.Router();
 
-// 1. පින්තූරය Save වෙන තැන සහ නම හදන හැටි
+// 1. පින්තූරය Save වෙන තැන (Vercel Fix)
 const storage = multer.diskStorage({
   destination(req, file, cb) {
-    cb(null, 'uploads/'); // 'uploads' ෆෝල්ඩර් එකට දාන්න
+    // 👇 වෙනස: 'uploads/' වෙනුවට '/tmp' භාවිතා කරන්න.
+    // Vercel එකේදී අපිට ලියන්න පුළුවන් '/tmp' ෆෝල්ඩර් එකට විතරයි.
+    cb(null, '/tmp'); 
   },
   filename(req, file, cb) {
-    // ෆයිල් එකට අලුත් නමක් දෙනවා (වෙලාව + extension එක)
+    // ෆයිල් එකට අලුත් නමක් දෙනවා
     cb(null, `${file.fieldname}-${Date.now()}${path.extname(file.originalname)}`);
   },
 });
@@ -24,7 +26,7 @@ function checkFileType(file, cb) {
   if (extname && mimetype) {
     return cb(null, true);
   } else {
-    cb('Images only!'); // පින්තූර නෙවෙයි නම් Error එකක්
+    cb('Images only!');
   }
 }
 
@@ -38,8 +40,14 @@ const upload = multer({
 
 // 4. Upload Route එක
 router.post('/', upload.single('image'), (req, res) => {
+  if (!req.file) {
+    return res.status(400).send('No file uploaded');
+  }
+
   // Frontend එකට පින්තූරයේ Path එක ආපහු යවනවා
-  res.send(`/${req.file.path}`);
+  // Vercel එකේදි මෙය තාවකාලික විසඳුමක් පමණි.
+  // හරියටම පින්තූර පෙන්වන්න නම් අපි Cloudinary භාවිතා කළ යුතුයි.
+  res.send(`/uploads/${req.file.filename}`);
 });
 
 export default router;

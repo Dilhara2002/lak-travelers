@@ -7,8 +7,11 @@ import {
 import {
   getUserProfile,
   updateUserProfile,
+  updateVendorProfile,
+  getPendingVendors, // 👈 Import
+  approveVendor,
 } from '../controllers/userController.js';
-import { protect } from '../middleware/authMiddleware.js';
+import { protect, admin } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
@@ -27,6 +30,7 @@ router.post('/auth', authUser);
 // Logout (POST /api/users/logout)
 router.post('/logout', logoutUser);
 
+
 /*
 |--------------------------------------------------------------------------
 | Profile Routes
@@ -38,5 +42,10 @@ router
   .route('/profile')
   .get(protect, getUserProfile)
   .put(protect, updateUserProfile);
+
+router.put('/vendor-profile', protect, updateVendorProfile);
+
+router.get('/pending', protect, admin, getPendingVendors);
+router.put('/approve/:id', protect, admin, approveVendor);
 
 export default router;

@@ -2,6 +2,9 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 
+// 👇 FIXED IMPORT PATH (Removed "..")
+import API from "./services/api"; 
+
 // Pages
 import Home from "./pages/Home";
 import Login from "./pages/Login";
@@ -27,6 +30,9 @@ import VehicleList from "./pages/VehicleList";
 import AddVehicle from "./pages/AddVehicle";
 import VehicleDetails from "./pages/VehicleDetails";
 
+
+import VendorSetup from "./pages/VendorSetup";
+
 function App() {
   return (
     <Router>
@@ -35,7 +41,6 @@ function App() {
         <Navbar />
 
         {/* 👇 ADDED 'pt-24': Pushes content down so it's not hidden behind Navbar */}
-        {/* ADDED 'flex-grow': Ensures Footer stays at the bottom on short pages */}
         <main className="pt-24 flex-grow px-4 md:px-0">
           <Routes>
             <Route path="/" element={<Home />} />
@@ -63,6 +68,7 @@ function App() {
             <Route path="/vehicles" element={<VehicleList />} />
             <Route path="/vehicles/:id" element={<VehicleDetails />} />
             <Route path="/add-vehicle" element={<AddVehicle />} />
+            <Route path="/vendor-setup" element={<VendorSetup />} />
           </Routes>
         </main>
 

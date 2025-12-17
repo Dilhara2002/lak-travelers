@@ -7,7 +7,12 @@ const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const user = JSON.parse(localStorage.getItem("userInfo"));
+  
+  // State for Desktop Profile Dropdown
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  
+  // 👇 State for Mobile Menu (Hamburger)
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const handleLogout = async () => {
     try {
@@ -21,15 +26,18 @@ const Navbar = () => {
     }
   };
 
-  const closeDropdown = () => setIsDropdownOpen(false);
+  const closeDropdown = () => {
+    setIsDropdownOpen(false);
+    setIsMobileMenuOpen(false); // Close mobile menu on click too
+  };
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 border-b border-gray-100 bg-white/90 backdrop-blur-md shadow-sm transition-all duration-300">
       <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         
         {/* BRAND LOGO */}
-        <Link to="/" className="flex items-center gap-3 group">
-          <div className="h-12 w-12 overflow-hidden rounded-full border border-gray-100 shadow-sm group-hover:shadow-md transition">
+        <Link to="/" className="flex items-center gap-3 group z-50">
+          <div className="h-10 w-10 md:h-12 md:w-12 overflow-hidden rounded-full border border-gray-100 shadow-sm group-hover:shadow-md transition">
             <img 
               src={logoImage} 
               alt="LakTravelers Logo" 
@@ -39,16 +47,16 @@ const Navbar = () => {
           </div>
           
           <div className="flex flex-col">
-            <span className="text-xl font-extrabold tracking-tight text-gray-900 leading-none">
+            <span className="text-lg md:text-xl font-extrabold tracking-tight text-gray-900 leading-none">
               Lak<span className="text-blue-600">Travelers</span>
             </span>
-            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 leading-none mt-1">
+            <span className="text-[9px] md:text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 leading-none mt-1">
               Explore Sri Lanka
             </span>
           </div>
         </Link>
 
-        {/* CENTER NAV LINKS */}
+        {/* ---------------- DESKTOP NAV LINKS (Hidden on Mobile) ---------------- */}
         <div className="hidden md:flex items-center space-x-8">
           {["Home", "Hotels", "Tours", "Vehicles"].map((item) => {
             const path = item === "Home" ? "/" : `/${item.toLowerCase()}`;
@@ -73,131 +81,131 @@ const Navbar = () => {
           })}
         </div>
 
-        {/* AUTH / USER SECTION */}
+        {/* ---------------- RIGHT SIDE (Auth + Mobile Toggle) ---------------- */}
         <div className="flex items-center gap-3">
+          
           {user ? (
+            // ✅ USER LOGGED IN (Show Avatar on both Desktop & Mobile)
             <div className="relative">
-              
-              {/* 👇 PROFILE BUTTON WITH ARROW */}
               <button
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                 className="flex items-center gap-2 rounded-full p-1 pr-3 bg-gray-50 border border-gray-200 hover:bg-white hover:shadow-md transition duration-200 focus:outline-none"
               >
-                {/* Avatar */}
                 <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-600 text-white font-bold text-sm shadow-sm">
                   {user.name.charAt(0).toUpperCase()}
                 </div>
-
-                {/* 👇 Down Arrow Icon (Rotates on Click) */}
+                {/* Hide name on small mobile, show on larger screens */}
+                <span className="hidden sm:block text-sm font-bold text-gray-700 max-w-[100px] truncate">{user.name}</span>
                 <svg 
-                  xmlns="http://www.w3.org/2000/svg" 
-                  fill="none" 
-                  viewBox="0 0 24 24" 
-                  strokeWidth={2.5} 
-                  stroke="currentColor" 
+                  xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" 
                   className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${isDropdownOpen ? "rotate-180" : ""}`}
                 >
                   <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
                 </svg>
               </button>
 
-              {/* Click Overlay */}
               {isDropdownOpen && (
-                <div
-                  className="fixed inset-0 z-10"
-                  onClick={() => setIsDropdownOpen(false)}
-                />
-              )}
-
-              {/* Dropdown Menu */}
-              {isDropdownOpen && (
-                <div className="absolute right-0 z-20 mt-3 w-64 origin-top-right rounded-xl border border-gray-100 bg-white shadow-xl ring-1 ring-black/5 animate-fade-in-up overflow-hidden">
-                  
-                  {/* User Info Header inside Dropdown */}
-                  <div className="bg-gray-50 px-4 py-3 border-b border-gray-100">
-                    <p className="text-sm font-bold text-gray-900 truncate">
-                      {user.name}
-                    </p>
-                    <p className="text-xs text-blue-600 font-semibold uppercase tracking-wide mt-0.5">
-                      {user.role}
-                    </p>
-                    <p className="text-xs text-gray-400 truncate mt-0.5">
-                      {user.email}
-                    </p>
-                  </div>
-
-                  <div className="p-2">
-                    {(user.role === "vendor" || user.role === "admin") && (
-                      <Link
-                        to="/dashboard"
-                        onClick={closeDropdown}
-                        className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25z" />
-                        </svg>
-                        Dashboard
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setIsDropdownOpen(false)} />
+                  <div className="absolute right-0 z-20 mt-3 w-64 origin-top-right rounded-xl border border-gray-100 bg-white shadow-xl ring-1 ring-black/5 animate-fade-in-up overflow-hidden">
+                    <div className="bg-gray-50 px-4 py-3 border-b border-gray-100">
+                      <p className="text-sm font-bold text-gray-900 truncate">{user.name}</p>
+                      <p className="text-xs text-blue-600 font-semibold uppercase tracking-wide mt-0.5">{user.role}</p>
+                      <p className="text-xs text-gray-400 truncate mt-0.5">{user.email}</p>
+                    </div>
+                    <div className="p-2">
+                      {(user.role === "vendor" || user.role === "admin") && (
+                        <Link to="/dashboard" onClick={closeDropdown} className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition">
+                           Dashboard
+                        </Link>
+                      )}
+                      {user.role === "user" && (
+                        <Link to="/my-bookings" onClick={closeDropdown} className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition">
+                           My Bookings
+                        </Link>
+                      )}
+                      <Link to="/profile" onClick={closeDropdown} className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition">
+                         My Profile
                       </Link>
-                    )}
-
-                    {user.role === "user" && (
-                      <Link
-                        to="/my-bookings"
-                        onClick={closeDropdown}
-                        className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-5.25h5.25M7.5 15h3M3.375 5.25c-.621 0-1.125.504-1.125 1.125v4.5c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-4.5c0-.621-.504-1.125-1.125-1.125H3.375z" />
-                        </svg>
-                        My Bookings
-                      </Link>
-                    )}
-
-                    <Link
-                      to="/profile"
-                      onClick={closeDropdown}
-                      className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
-                      </svg>
-                      My Profile
-                    </Link>
-
-                    <div className="my-1 h-px bg-gray-100" />
-
-                    <button
-                      onClick={handleLogout}
-                      className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-red-500 hover:bg-red-50 transition"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6A2.25 2.25 0 005.25 5.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" />
-                      </svg>
-                      Logout
-                    </button>
+                      <div className="my-1 h-px bg-gray-100" />
+                      <button onClick={handleLogout} className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-red-500 hover:bg-red-50 transition">
+                         Logout
+                      </button>
+                    </div>
                   </div>
-                </div>
+                </>
               )}
             </div>
           ) : (
-            // ❌ Logged Out Buttons
-            <div className="flex items-center gap-3">
-              <Link
-                to="/login"
-                className="rounded-full px-5 py-2 text-sm font-bold text-gray-600 hover:text-blue-600 transition"
-              >
-                Log In
-              </Link>
-              <Link
-                to="/register"
-                className="rounded-full bg-blue-600 px-6 py-2.5 text-sm font-bold text-white shadow-md hover:bg-blue-700 hover:shadow-lg transition-transform hover:-translate-y-0.5"
-              >
-                Sign Up
-              </Link>
+            // ❌ USER LOGGED OUT
+            // On Desktop: Show Buttons. On Mobile: Hide them (move to menu)
+            <div className="hidden md:flex items-center gap-3">
+              <Link to="/login" className="rounded-full px-5 py-2 text-sm font-bold text-gray-600 hover:text-blue-600 transition">Log In</Link>
+              <Link to="/register" className="rounded-full bg-blue-600 px-6 py-2.5 text-sm font-bold text-white shadow-md hover:bg-blue-700 hover:shadow-lg transition-transform hover:-translate-y-0.5">Sign Up</Link>
             </div>
           )}
+
+          {/* 👇 MOBILE MENU BUTTON (Hamburger) */}
+          <button 
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="md:hidden p-2 rounded-lg text-gray-600 hover:bg-gray-100 focus:outline-none transition"
+          >
+            {isMobileMenuOpen ? (
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+              </svg>
+            )}
+          </button>
         </div>
       </div>
+
+      {/* ---------------- MOBILE MENU DROPDOWN ---------------- */}
+      {isMobileMenuOpen && (
+        <div className="md:hidden border-t border-gray-100 bg-white px-4 pt-4 pb-6 shadow-lg animate-fade-in-down">
+          <div className="flex flex-col space-y-4">
+            {["Home", "Hotels", "Tours", "Vehicles"].map((item) => {
+              const path = item === "Home" ? "/" : `/${item.toLowerCase()}`;
+              const isActive = location.pathname === path;
+              return (
+                <Link
+                  key={item}
+                  to={path}
+                  onClick={closeDropdown}
+                  className={`text-lg font-bold px-4 py-2 rounded-lg transition-colors ${
+                    isActive ? "bg-blue-50 text-blue-600" : "text-gray-600 hover:bg-gray-50"
+                  }`}
+                >
+                  {item}
+                </Link>
+              );
+            })}
+
+            {/* Mobile Auth Buttons (Only if logged out) */}
+            {!user && (
+              <div className="mt-4 flex flex-col gap-3 border-t border-gray-100 pt-4 px-2">
+                <Link 
+                  to="/login" 
+                  onClick={closeDropdown}
+                  className="w-full text-center rounded-xl border border-gray-200 py-3 text-sm font-bold text-gray-700 hover:bg-gray-50"
+                >
+                  Log In
+                </Link>
+                <Link 
+                  to="/register" 
+                  onClick={closeDropdown}
+                  className="w-full text-center rounded-xl bg-blue-600 py-3 text-sm font-bold text-white shadow-md hover:bg-blue-700"
+                >
+                  Sign Up
+                </Link>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </nav>
   );
 };

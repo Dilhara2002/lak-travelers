@@ -24,16 +24,26 @@ connectDB();
 const app = express();
 
 // 3. Middleware Setup (UPDATED CORS) 🔒
-// මෙතන ඔබේ අලුත් Frontend Link එක දැම්මා.
+// මෙතන ඔබේ Frontend URL එක සහ localhost දෙකම ඇතුලත් කර ඇත.
 const allowedOrigins = [
-  "http://localhost:5173",                 // Localhost සඳහා
-  "https://lak-travelers-z1uk.vercel.app"  // Live Website සඳහා (අගට / නැතුව)
+  "http://localhost:5173",                 // Local Development
+  "https://lak-travelers-z1uk.vercel.app", // Your Vercel Frontend (From Screenshot)
+  "https://lak-travelers.vercel.app"       // Main Vercel Domain (Just in case)
 ];
 
 app.use(cors({ 
-  origin: allowedOrigins, 
+  origin: (origin, callback) => {
+    // Mobile Apps හෝ Postman වැනි tools වලින් එන ඉල්ලීම් (origin නැති) භාරගන්න
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) === -1) {
+      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+      return callback(new Error(msg), false);
+    }
+    return callback(null, true);
+  },
   credentials: true, // Cookies හුවමාරු කරගැනීමට මෙය අනිවාර්යයි
-  methods: ["GET", "POST", "PUT", "DELETE"]
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
 }));
 
 app.use(express.json());
@@ -45,6 +55,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // 5. Image Uploads Folder (Static)
+// සටහන: Vercel හිදී මෙය වැඩ කරන්නේ තාවකාලිකව පමණි. 
 app.use('/uploads', express.static(path.join(__dirname, '/uploads')));
 
 // 6. API Routes
@@ -54,7 +65,7 @@ app.use('/api/tours', tourRoutes);
 app.use('/api/vehicles', vehicleRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/admin', adminRoutes);
-app.use('/api/upload', uploadRoutes);
+app.use('/api/upload', uploadRoutes); // 👈 මෙය තිබීම අනිවාර්යයි (404 එන්නේ මෙය නැති වුවහොත්ය)
 
 // 7. Root Route
 app.get('/', (req, res) => {
@@ -68,10 +79,9 @@ app.use(errorHandler);
 // 9. Server Start
 const PORT = process.env.PORT || 5001;
 
-// Vercel එකේදි server එක start කරන්න එපා, local දුවද්දී විතරක් start කරන්න
+// Vercel සඳහා server start කිරීමේ logic එක
 if (process.env.NODE_ENV !== 'production') {
     app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 }
 
-// Vercel සඳහා export කිරීම
 export default app;
