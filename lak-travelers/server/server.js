@@ -23,15 +23,14 @@ connectDB();
 // 2. App Initialize
 const app = express();
 
-// 3. Middleware Setup (FIXED CORS FOR 401 ERRORS) 🔒
-// 401 Unauthorized දෝෂය මගහරවා ගැනීමට origin සැකසුම මෙසේ සරල කරන්න
+// 3. Middleware Setup (CORS FIXED) 🔒
 app.use(cors({ 
   origin: [
     "http://localhost:5173",                 // Local Development
-    "https://lak-travelers-z1uk.vercel.app", // Your Vercel Frontend
-    "https://lak-travelers.vercel.app"       // Alternative Vercel Domain
+    "https://lak-travelers-z1uk.vercel.app", // Your Frontend
+    "https://lak-travelers.vercel.app"
   ],
-  credentials: true, // Cookies (JWT) හුවමාරු කරගැනීමට මෙය අනිවාර්යයි
+  credentials: true, // Cookies (JWT) වැඩ කිරීමට මෙය අනිවාර්යයි
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization", "Set-Cookie"]
 }));
@@ -44,7 +43,7 @@ app.use(cookieParser()); // Cookies කියවීම සඳහා මෙය �
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// 5. Image Uploads Folder (Static)
+// 5. Image Uploads Folder
 app.use('/uploads', express.static(path.join(__dirname, '/uploads')));
 
 // 6. API Routes
@@ -68,7 +67,6 @@ app.use(errorHandler);
 // 9. Server Start
 const PORT = process.env.PORT || 5001;
 
-// Vercel සඳහා server start කිරීමේ logic එක
 if (process.env.NODE_ENV !== 'production') {
     app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 }
