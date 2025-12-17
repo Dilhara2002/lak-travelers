@@ -3,19 +3,19 @@ import { Link } from 'react-router-dom';
 import API from '../services/api';
 
 // 👇 Import your local images
-import i1 from "../assets/i1.jpg"; 
-import i2 from "../assets/i2.jpg"; 
-import i3 from "../assets/i3.jpg"; 
-import i4 from "../assets/i4.jpg"; 
-import i5 from "../assets/i5.jpg"; 
-import i6 from "../assets/i6.jpg"; 
-import i7 from "../assets/i7.jpg"; 
+import i1 from "../assets/i1.jpg";
+import i2 from "../assets/i2.jpg";
+import i3 from "../assets/i3.jpg";
+import i4 from "../assets/i4.jpg";
+import i5 from "../assets/i5.jpg";
+import i6 from "../assets/i6.jpg";
+import i7 from "../assets/i7.jpg";
 
 const Home = () => {
   const [hotels, setHotels] = useState([]);
   const [tours, setTours] = useState([]);
   const [loading, setLoading] = useState(true);
-  
+
   // 👇 State for the background slider index
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
@@ -39,19 +39,22 @@ const Home = () => {
 
     // 👇 Background Slider Timer Logic (Change every 10s)
     const intervalId = setInterval(() => {
-      setCurrentImageIndex((prevIndex) => 
+      setCurrentImageIndex((prevIndex) =>
         prevIndex === heroImages.length - 1 ? 0 : prevIndex + 1
       );
-    }, 10000); 
+    }, 10000);
 
     return () => clearInterval(intervalId);
   }, []);
 
+  // නිවැරදි කළ යුතු ආකාරය:
   const getImageUrl = (imagePath) => {
     if (!imagePath) return "https://via.placeholder.com/600x400?text=No+Image";
     if (imagePath.startsWith("http")) return imagePath;
     const cleanPath = imagePath.startsWith("/") ? imagePath : `/${imagePath}`;
-    return `http://localhost:5001${cleanPath}`;
+
+    // 👇 මෙතන ඔයාගේ Render/Vercel Backend URL එක දාන්න (අගට / නැතුව)
+    return `https://lak-travelers-z1uk.vercel.app${cleanPath}`;
   };
 
   // Skeleton Loader Component
@@ -68,20 +71,19 @@ const Home = () => {
 
   return (
     <div className="bg-gray-50 min-h-screen font-sans text-gray-800">
-      
+
       {/* 1. HERO SECTION (Mobile Optimized) */}
       <div className="relative min-h-[600px] lg:h-[700px] flex items-center justify-center px-4 overflow-hidden">
-        
+
         {/* Background Image Slider */}
         <div className="absolute inset-0">
           {heroImages.map((imgUrl, index) => (
-            <img 
+            <img
               key={index}
-              src={imgUrl} 
-              alt={`Slide ${index}`} 
-              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-[2000ms] ease-in-out ${
-                index === currentImageIndex ? 'opacity-100 z-0' : 'opacity-0 -z-10'
-              }`}
+              src={imgUrl}
+              alt={`Slide ${index}`}
+              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-[2000ms] ease-in-out ${index === currentImageIndex ? 'opacity-100 z-0' : 'opacity-0 -z-10'
+                }`}
             />
           ))}
           <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/30 to-gray-900/90 z-10"></div>
@@ -92,24 +94,24 @@ const Home = () => {
           <span className="uppercase tracking-widest text-xs md:text-sm font-semibold bg-white/20 px-4 py-1 rounded-full backdrop-blur-md border border-white/30">
             Welcome to Paradise
           </span>
-          
+
           {/* Responsive Font Sizes */}
           <h1 className="text-4xl sm:text-5xl md:text-7xl font-extrabold tracking-tight drop-shadow-2xl leading-tight">
-            Discover the Soul of <br/>
+            Discover the Soul of <br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-500">
               Sri Lanka
             </span>
           </h1>
-          
+
           <p className="text-base md:text-xl text-gray-200 max-w-2xl mx-auto font-light leading-relaxed">
             Your journey begins here. Explore top-rated hotels, immersive tours, and seamless travel experiences.
           </p>
 
           {/* Quick Action Search Bar - Stacks on Mobile */}
           <div className="mt-8 bg-white/10 backdrop-blur-md p-3 rounded-2xl md:rounded-full border border-white/20 max-w-xl mx-auto flex flex-col sm:flex-row gap-3">
-            <input 
-              type="text" 
-              placeholder="Where do you want to go?" 
+            <input
+              type="text"
+              placeholder="Where do you want to go?"
               className="w-full bg-transparent text-white placeholder-gray-300 px-4 md:px-6 py-3 outline-none text-center sm:text-left"
             />
             <Link to="/hotels" className="w-full sm:w-auto bg-yellow-500 hover:bg-yellow-400 text-gray-900 px-8 py-3 rounded-xl md:rounded-full font-bold transition shadow-lg flex items-center justify-center gap-2">
@@ -121,7 +123,7 @@ const Home = () => {
       </div>
 
       <div className="container mx-auto px-4 py-16 md:py-20 space-y-20 md:space-y-24">
-        
+
         {/* 2. HOTELS SECTION */}
         <section>
           {/* Header stacks centered on mobile, spreads on desktop */}
@@ -131,7 +133,7 @@ const Home = () => {
               <p className="text-gray-500 mt-2 text-base md:text-lg">Handpicked hotels for your perfect vacation.</p>
             </div>
             <Link to="/hotels" className="group flex items-center gap-2 text-blue-600 font-semibold transition hover:text-blue-800">
-              View All Hotels 
+              View All Hotels
               <span className="group-hover:translate-x-1 transition-transform">→</span>
             </Link>
           </div>
@@ -143,10 +145,10 @@ const Home = () => {
               hotels.map((hotel) => (
                 <div key={hotel._id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 group">
                   <div className="h-56 md:h-64 overflow-hidden relative">
-                    <img 
-                      src={getImageUrl(hotel.image)} 
-                      alt={hotel.name} 
-                      className="w-full h-full object-cover group-hover:scale-105 transition duration-700" 
+                    <img
+                      src={getImageUrl(hotel.image)}
+                      alt={hotel.name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition duration-700"
                     />
                     <div className="absolute top-4 right-4 bg-white/90 backdrop-blur text-gray-900 text-xs font-bold px-3 py-1 rounded-full shadow-sm">
                       ⭐ 4.8 Rating
@@ -182,7 +184,7 @@ const Home = () => {
               <p className="text-gray-500 mt-2 text-base md:text-lg">Curated experiences you'll never forget.</p>
             </div>
             <Link to="/tours" className="group flex items-center gap-2 text-green-600 font-semibold transition hover:text-green-800">
-              Explore All Tours 
+              Explore All Tours
               <span className="group-hover:translate-x-1 transition-transform">→</span>
             </Link>
           </div>
@@ -195,10 +197,10 @@ const Home = () => {
                 <div key={tour._id} className="relative bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-2xl transition-all duration-300 group">
                   <div className="h-64 md:h-72 overflow-hidden relative">
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent z-10"></div>
-                    <img 
-                      src={getImageUrl(tour.image)} 
-                      alt={tour.name} 
-                      className="w-full h-full object-cover group-hover:scale-110 transition duration-700" 
+                    <img
+                      src={getImageUrl(tour.image)}
+                      alt={tour.name}
+                      className="w-full h-full object-cover group-hover:scale-110 transition duration-700"
                     />
                     <div className="absolute bottom-4 left-4 z-20 text-white pr-4">
                       <span className="bg-green-500 text-xs font-bold px-2 py-1 rounded mb-2 inline-block">
@@ -210,14 +212,14 @@ const Home = () => {
                       </p>
                     </div>
                   </div>
-                  
+
                   <div className="p-4 md:p-5 flex justify-between items-center bg-gray-50">
-                     <p className="text-gray-700 font-bold text-lg">
-                       LKR {tour.price.toLocaleString()} <span className="text-xs text-gray-400 font-normal">/ person</span>
-                     </p>
-                     <Link to={`/tours/${tour._id}`} className="text-green-600 font-bold hover:text-green-700 transition flex items-center gap-1 text-sm">
-                       View Package <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
-                     </Link>
+                    <p className="text-gray-700 font-bold text-lg">
+                      LKR {tour.price.toLocaleString()} <span className="text-xs text-gray-400 font-normal">/ person</span>
+                    </p>
+                    <Link to={`/tours/${tour._id}`} className="text-green-600 font-bold hover:text-green-700 transition flex items-center gap-1 text-sm">
+                      View Package <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
+                    </Link>
                   </div>
                 </div>
               ))
@@ -230,17 +232,17 @@ const Home = () => {
       {/* 4. TRUST BADGES (Responsive Grid) */}
       <div className="bg-white py-10 md:py-12 border-t border-gray-100">
         <div className="container mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 px-4 text-center">
-            {[
-              { label: "Verified Hotels", icon: "🏨" },
-              { label: "Secure Booking", icon: "🔒" },
-              { label: "24/7 Support", icon: "🎧" },
-              { label: "Best Price Guarantee", icon: "🏷️" },
-            ].map((item, idx) => (
-              <div key={idx} className="flex flex-col items-center gap-3">
-                <span className="text-3xl md:text-4xl bg-gray-50 p-3 md:p-4 rounded-full">{item.icon}</span>
-                <span className="font-bold text-gray-700 text-sm md:text-base">{item.label}</span>
-              </div>
-            ))}
+          {[
+            { label: "Verified Hotels", icon: "🏨" },
+            { label: "Secure Booking", icon: "🔒" },
+            { label: "24/7 Support", icon: "🎧" },
+            { label: "Best Price Guarantee", icon: "🏷️" },
+          ].map((item, idx) => (
+            <div key={idx} className="flex flex-col items-center gap-3">
+              <span className="text-3xl md:text-4xl bg-gray-50 p-3 md:p-4 rounded-full">{item.icon}</span>
+              <span className="font-bold text-gray-700 text-sm md:text-base">{item.label}</span>
+            </div>
+          ))}
         </div>
       </div>
 
