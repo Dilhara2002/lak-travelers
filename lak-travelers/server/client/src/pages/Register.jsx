@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import API from '../services/api';
 import { toast } from 'react-toastify';
 import registerImage from '../assets/Register.jpg';
 
 const Register = () => {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [formData, setFormData] = useState({
     name: '',
@@ -16,12 +17,27 @@ const Register = () => {
   });
 
   const [isLoading, setIsLoading] = useState(false);
-
   const userInfo = JSON.parse(localStorage.getItem('userInfo'));
 
-  /* ===============================
-     Redirect if already logged in
-  ================================ */
+  /* ============================================================
+     ✅ විසඳුම: පිටුවට පැමිණි විගස එය මුදුනට (Top) Scroll කිරීම
+  ============================================================ */
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
+  /* ============================================================
+     URL එක පරීක්ෂා කර ?role=vendor තිබේ නම් එය Auto-Select කිරීම
+  ============================================================ */
+  useEffect(() => {
+    const queryParams = new URLSearchParams(location.search);
+    const roleFromUrl = queryParams.get('role');
+    
+    if (roleFromUrl === 'vendor') {
+      setFormData((prev) => ({ ...prev, role: 'vendor' }));
+    }
+  }, [location]);
+
   useEffect(() => {
     if (userInfo) {
       if (userInfo.role === 'vendor' && !userInfo.isApproved) {
@@ -32,16 +48,10 @@ const Register = () => {
     }
   }, [userInfo, navigate]);
 
-  /* ===============================
-     Handle input change
-  ================================ */
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  /* ===============================
-     Handle register submit
-  ================================ */
   const handleSubmit = async (e) => {
     e.preventDefault();
     const { name, email, password, confirmPassword, role } = formData;
@@ -79,8 +89,8 @@ const Register = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-      <div className="bg-white rounded-2xl shadow-xl overflow-hidden max-w-5xl w-full flex flex-col md:flex-row">
+    <div className="min-h-screen flex items-start justify-center bg-gray-50 p-4 pt-10">
+  <div className="bg-white rounded-2xl shadow-xl overflow-hidden max-w-5xl w-full flex flex-col md:flex-row mt-4">
 
         {/* LEFT: FORM */}
         <div className="w-full md:w-1/2 p-8 md:p-12">
@@ -92,8 +102,6 @@ const Register = () => {
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-5">
-
-            {/* ROLE SELECTION */}
             <div>
               <label className="block text-sm font-bold text-gray-700 mb-2">
                 I am a
@@ -104,8 +112,8 @@ const Register = () => {
                   onClick={() => setFormData({ ...formData, role: 'user' })}
                   className={`py-3 rounded-xl font-semibold border transition
                     ${formData.role === 'user'
-                      ? 'bg-blue-600 text-white border-blue-600'
-                      : 'bg-white border-gray-300 text-gray-600'}
+                      ? 'bg-blue-600 text-white border-blue-600 shadow-md'
+                      : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'}
                   `}
                 >
                    Traveler
@@ -116,8 +124,8 @@ const Register = () => {
                   onClick={() => setFormData({ ...formData, role: 'vendor' })}
                   className={`py-3 rounded-xl font-semibold border transition
                     ${formData.role === 'vendor'
-                      ? 'bg-slate-900 text-white border-slate-900'
-                      : 'bg-white border-gray-300 text-gray-600'}
+                      ? 'bg-slate-900 text-white border-slate-900 shadow-md'
+                      : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'}
                   `}
                 >
                    Vendor
@@ -125,7 +133,6 @@ const Register = () => {
               </div>
             </div>
 
-            {/* NAME */}
             <input
               type="text"
               name="name"
@@ -136,7 +143,6 @@ const Register = () => {
               className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
             />
 
-            {/* EMAIL */}
             <input
               type="email"
               name="email"
@@ -147,7 +153,6 @@ const Register = () => {
               className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
             />
 
-            {/* PASSWORD */}
             <input
               type="password"
               name="password"
@@ -158,7 +163,6 @@ const Register = () => {
               className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
             />
 
-            {/* CONFIRM PASSWORD */}
             <input
               type="password"
               name="confirmPassword"
@@ -169,11 +173,10 @@ const Register = () => {
               className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
             />
 
-            {/* SUBMIT */}
             <button
               type="submit"
               disabled={isLoading}
-              className={`w-full py-3 rounded-xl font-bold text-white transition
+              className={`w-full py-3 rounded-xl font-bold text-white transition shadow-lg
                 ${isLoading
                   ? 'bg-blue-400 cursor-not-allowed'
                   : formData.role === 'vendor'
@@ -181,7 +184,7 @@ const Register = () => {
                     : 'bg-blue-600 hover:bg-blue-700'}
               `}
             >
-              {isLoading ? 'Creating Account...' : 'Sign Up'}
+              {isLoading ? 'Creating Account...' : (formData.role === 'vendor' ? 'Register as Vendor' : 'Sign Up')}
             </button>
           </form>
 
@@ -207,7 +210,6 @@ const Register = () => {
             </p>
           </div>
         </div>
-
       </div>
     </div>
   );
