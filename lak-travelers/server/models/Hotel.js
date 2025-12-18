@@ -3,9 +3,9 @@ import mongoose from 'mongoose';
 // 1. තනි Review එකක් හැදෙන විදිය (Schema)
 const reviewSchema = mongoose.Schema({
   name: { type: String, required: true },   // Review දාපු කෙනාගේ නම
-  rating: { type: Number, required: true }, // දුන්න තරු ගණන (1-5)
+  rating: { type: Number, required: true, min: 1, max: 5 }, // 1-5 අතර පමණක් තරු ලබා දිය හැක
   comment: { type: String, required: true }, // Comment එක
-  image: { type: String },
+  image: { type: String }, // Review එකක් සමඟ පින්තූරයක් එක් කිරීමට
   user: {
     type: mongoose.Schema.Types.ObjectId,
     required: true,
@@ -17,31 +17,51 @@ const reviewSchema = mongoose.Schema({
 
 // 2. Hotel Schema එක
 const hotelSchema = mongoose.Schema({
+  // හෝටලය ඇතුළත් කළ පරිශීලකයා (Vendor/Admin)
   user: {
     type: mongoose.Schema.Types.ObjectId,
     required: true,
     ref: 'User',
   },
-  name: { type: String, required: true },
-  location: { type: String, required: true },
-  description: { type: String, required: true },
-  pricePerNight: { type: Number, required: true },
-  image: { type: String },
-  mapUrl: { type: String, required: true },
+  name: { 
+    type: String, 
+    required: [true, 'Please add a hotel name'] 
+  },
+  location: { 
+    type: String, 
+    required: [true, 'Please add a location'] 
+  },
+  description: { 
+    type: String, 
+    required: [true, 'Please add a description'] 
+  },
+  pricePerNight: { 
+    type: Number, 
+    required: [true, 'Please add price per night'],
+    default: 0 
+  },
+  image: { 
+    type: String, 
+    required: [true, 'Please upload a hotel image'] 
+  },
+  mapUrl: { 
+    type: String, 
+    required: [true, 'Please add a Google Maps URL'] 
+  },
   
-  // 👇 අලුතින් එකතු කළ කොටස්
-  reviews: [reviewSchema], // Reviews List එකක්
+  // Reviews List එකක්
+  reviews: [reviewSchema], 
   
   rating: {
     type: Number,
     required: true,
-    default: 0, // මුලින්ම Rating එක 0 යි
+    default: 0, 
   },
   
   numReviews: {
     type: Number,
     required: true,
-    default: 0, // මුලින්ම Reviews ගණන 0 යි
+    default: 0, 
   },
 
 }, {

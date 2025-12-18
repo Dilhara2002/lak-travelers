@@ -7,7 +7,17 @@ import Tour from '../models/Tour.js';
  * @access  Public
  */
 const getTours = asyncHandler(async (req, res) => {
-  const tours = await Tour.find({}).populate('user', 'name email');
+  // සෙවුම් පහසුකම් සඳහා keyword එකක් තිබේදැයි බලයි
+  const keyword = req.query.keyword
+    ? {
+        name: {
+          $regex: req.query.keyword,
+          $options: 'i',
+        },
+      }
+    : {};
+
+  const tours = await Tour.find({ ...keyword }).populate('user', 'name email');
   res.json(tours);
 });
 
@@ -33,10 +43,10 @@ const getTourById = asyncHandler(async (req, res) => {
  * @access  Private (Vendor / Admin)
  */
 const createTour = asyncHandler(async (req, res) => {
-  // 🔐 Role-based authorization
-  if (req.user.role !== 'vendor' && req.user.role !== 'admin') {
-    res.status(401);
-    throw new Error('Not authorized to create tours');
+  // 🔐 අනුමත වූ (Approved) Vendor කෙනෙක් දැයි පරීක්ෂා කිරීම
+  if (req.user.role === 'vendor' && !req.user.isApproved) {
+    res.status(403);
+    throw new Error('Your vendor account is not approved yet');
   }
 
   const {
@@ -49,14 +59,14 @@ const createTour = asyncHandler(async (req, res) => {
     image,
   } = req.body;
 
-  // 🛑 Validation
+  // 🛑 අත්‍යවශ්‍ය දත්ත තිබේදැයි පරීක්ෂා කිරීම
   if (!name || !description || !price || !duration || !destinations || !groupSize || !image) {
     res.status(400);
     throw new Error('Please fill all required fields');
   }
 
   const tour = new Tour({
-    user: req.user._id,
+    user: req.user._id, // Auth middleware එකෙන් ලැබෙන ID එක
     name,
     description,
     price,
@@ -71,46 +81,23 @@ const createTour = asyncHandler(async (req, res) => {
 });
 
 /**
- * @desc    Delete a tour
- * @route   DELETE /api/tours/:id
- * @access  Private (Admin or Owner)
+ * @desc    Update a tour
+ * @route   PUT /api/tours/:id
+ * @access  Private (Vendor/Admin)
  */
-const deleteTour = asyncHandler(async (req, res) => {
-  const tour = await Tour.findById(req.params.id);
-
-  if (!tour) {
-    res.status(404);
-    throw new Error('Tour not found');
-  }
-
-  // 🔐 Admin OR Owner can delete
-  if (
-    req.user.role === 'admin' ||
-    tour.user.toString() === req.user._id.toString()
-  ) {
-    await tour.deleteOne();
-    res.json({ message: 'Tour removed successfully' });
-  } else {
-    res.status(401);
-    throw new Error('Not authorized to delete this tour');
-  }
-});
-
-// @desc    Update a tour
-// @route   PUT /api/tours/:id
-// @access  Private (Vendor/Admin)
 const updateTour = asyncHandler(async (req, res) => {
-  const { name, destinations, duration, price, groupSize, image } = req.body;
+  const { name, description, destinations, duration, price, groupSize, image } = req.body;
   const tour = await Tour.findById(req.params.id);
 
   if (tour) {
-    // Security Check: අයිතිකාරයාද හෝ Admin ද කියලා බලනවා
+    // 🔐 ආරක්ෂක පියවර: අයිතිකරුට හෝ ඇඩ්මින්ට පමණක් අවසරය
     if (req.user.role !== 'admin' && tour.user.toString() !== req.user._id.toString()) {
       res.status(401);
       throw new Error('Not authorized to update this tour');
     }
 
     tour.name = name || tour.name;
+    tour.description = description || tour.description;
     tour.destinations = destinations || tour.destinations;
     tour.duration = duration || tour.duration;
     tour.price = price || tour.price;
@@ -125,9 +112,34 @@ const updateTour = asyncHandler(async (req, res) => {
   }
 });
 
-// @desc    Create new review
-// @route   POST /api/tours/:id/reviews
-// @access  Private
+/**
+ * @desc    Delete a tour
+ * @route   DELETE /api/tours/:id
+ * @access  Private (Admin or Owner)
+ */
+const deleteTour = asyncHandler(async (req, res) => {
+  const tour = await Tour.findById(req.params.id);
+
+  if (tour) {
+    // 🔐 Admin OR Owner can delete
+    if (req.user.role === 'admin' || tour.user.toString() === req.user._id.toString()) {
+      await tour.deleteOne();
+      res.json({ message: 'Tour removed successfully' });
+    } else {
+      res.status(401);
+      throw new Error('Not authorized to delete this tour');
+    }
+  } else {
+    res.status(404);
+    throw new Error('Tour not found');
+  }
+});
+
+/**
+ * @desc    Create new review
+ * @route   POST /api/tours/:id/reviews
+ * @access  Private
+ */
 const createTourReview = asyncHandler(async (req, res) => {
   const { rating, comment, image } = req.body;
   const tour = await Tour.findById(req.params.id);
@@ -152,6 +164,8 @@ const createTourReview = asyncHandler(async (req, res) => {
 
     tour.reviews.push(review);
     tour.numReviews = tour.reviews.length;
+    
+    // සාමාන්‍ය රේටින්ග් එක ගණනය කිරීම
     tour.rating =
       tour.reviews.reduce((acc, item) => item.rating + acc, 0) /
       tour.reviews.length;

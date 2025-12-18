@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
-import API from '../services/api';
 import { useNavigate, useParams } from 'react-router-dom';
-import axios from 'axios';
+import API from '../services/api'; // අපි කලින් හදාගත් API instance එක
 
 const EditHotel = () => {
   const { id } = useParams();
@@ -20,23 +19,23 @@ const EditHotel = () => {
   const [uploading, setUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
 
-  // 1. Fetch Existing Data
+  // 1. පවතින දත්ත ලබා ගැනීම (Fetch Existing Data)
   useEffect(() => {
     const fetchHotel = async () => {
       try {
         const { data } = await API.get(`/hotels/${id}`);
         setFormData({
-            name: data.name,
-            location: data.location,
-            description: data.description,
-            pricePerNight: data.pricePerNight,
-            image: data.image,
+            name: data.name || '',
+            location: data.location || '',
+            description: data.description || '',
+            pricePerNight: data.pricePerNight || '',
+            image: data.image || '',
             mapUrl: data.mapUrl || ''
         });
         setLoading(false);
       } catch (error) {
-        console.error(error);
-        alert("Error loading hotel data");
+        console.error("Fetch Error:", error);
+        alert("Error loading hotel data. Redirecting...");
         navigate('/hotels');
       }
     };
@@ -47,7 +46,9 @@ const EditHotel = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // Image Upload Logic (Same as AddHotel)
+  /**
+   * 🖼️ නව පින්තූරයක් Cloudinary වෙත උඩුගත කිරීම
+   */
   const handleFileUpload = async (file) => {
     if (!file) return;
     setUploading(true);
@@ -56,14 +57,17 @@ const EditHotel = () => {
     data.append('image', file);
 
     try {
-      const config = { headers: { 'Content-Type': 'multipart/form-data' } };
-      const res = await axios.post('http://localhost:5001/api/upload', data, config);
+      // ⚠️ මෙහිදී API භාවිතා කිරීමෙන් CORS සහ 401 දෝෂ මගහැරේ
+      const res = await API.post('/upload', data, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
       
-      // Update state with new image path
+      // Cloudinary මගින් ලැබෙන URL එක formData එකට එකතු කරයි
       setFormData((prev) => ({ ...prev, image: res.data }));
+      alert("New image uploaded! ✅");
     } catch (error) {
-      console.error(error);
-      alert('Image upload failed! ❌');
+      console.error("Upload Error:", error);
+      alert(error.response?.data?.message || 'Image upload failed! ❌');
     } finally {
       setUploading(false);
     }
@@ -80,21 +84,28 @@ const EditHotel = () => {
     handleFileUpload(e.dataTransfer.files[0]);
   };
 
-  // Helper to render image URL
+  /**
+   * පින්තූරය පෙන්වීමට URL එක සකසන Helper Function එක
+   */
   const getImageUrl = (path) => {
-    if (!path) return '';
-    return path.startsWith("http") ? path : `http://localhost:5001${path}`;
+    if (!path) return "https://via.placeholder.com/400x300?text=No+Image";
+    if (path.startsWith("http")) return path;
+    const backendURL = "https://lak-travelers-api.vercel.app"; // ඔබේ Backend URL එක
+    return `${backendURL}${path.startsWith("/") ? path : `/${path}`}`;
   };
 
+  /**
+   * 📝 හෝටල් තොරතුරු යාවත්කාලීන කිරීම (Update)
+   */
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
       await API.put(`/hotels/${id}`, formData);
       alert('Hotel Updated Successfully! 📝');
-      navigate(`/hotels/${id}`); // Redirect to details page
+      navigate(`/hotels/${id}`); 
     } catch (error) {
-      console.error(error);
-      alert('Failed to update hotel');
+      console.error("Update Error:", error);
+      alert(error.response?.data?.message || 'Failed to update hotel');
     }
   };
 
@@ -108,7 +119,7 @@ const EditHotel = () => {
     <div className="min-h-screen bg-slate-50 py-12 px-4 sm:px-6 lg:px-8 font-sans">
       <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         
-        {/* Professional Header */}
+        {/* Header */}
         <div className="bg-slate-900 px-8 py-6 flex justify-between items-center">
           <div>
             <h2 className="text-xl font-semibold text-white tracking-wide">Edit Property</h2>
@@ -130,27 +141,24 @@ const EditHotel = () => {
                <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-6 border-b border-slate-100 pb-2">Property Details</h3>
                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                  
-                 {/* Name */}
                  <div className="col-span-2">
                     <label className="block text-sm font-medium text-slate-700 mb-2">Hotel Name</label>
-                    <input type="text" name="name" value={formData.name} onChange={handleChange} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none transition-all" />
+                    <input type="text" name="name" value={formData.name} onChange={handleChange} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none transition-all" required />
                  </div>
 
-                 {/* Location */}
                  <div>
                     <label className="block text-sm font-medium text-slate-700 mb-2">Location</label>
                     <div className="relative">
                         <span className="absolute left-3 top-3 text-slate-400">📍</span>
-                        <input type="text" name="location" value={formData.location} onChange={handleChange} className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none transition-all" />
+                        <input type="text" name="location" value={formData.location} onChange={handleChange} className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none transition-all" required />
                     </div>
                  </div>
 
-                 {/* Price */}
                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">Price (LKR)</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Price Per Night (LKR)</label>
                     <div className="relative">
                         <span className="absolute left-3 top-3 text-slate-400 font-bold text-xs">Rs</span>
-                        <input type="number" name="pricePerNight" value={formData.pricePerNight} onChange={handleChange} className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none transition-all" />
+                        <input type="number" name="pricePerNight" value={formData.pricePerNight} onChange={handleChange} className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none transition-all" required />
                     </div>
                  </div>
                </div>
@@ -160,15 +168,12 @@ const EditHotel = () => {
             <div>
                <div className="mb-6">
                  <label className="block text-sm font-medium text-slate-700 mb-2">Description</label>
-                 <textarea name="description" rows="4" value={formData.description} onChange={handleChange} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none transition-all resize-none"></textarea>
+                 <textarea name="description" rows="4" value={formData.description} onChange={handleChange} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none transition-all resize-none" required></textarea>
                </div>
 
                <div className="mb-6">
                  <label className="block text-sm font-medium text-slate-700 mb-2">Google Maps Embed URL</label>
-                 <div className="bg-blue-50 border-l-4 border-blue-600 p-4 rounded-r-lg mb-3">
-                    <p className="text-sm text-blue-800">Ensure this is the <strong>src="..."</strong> link from the Google Embed code.</p>
-                 </div>
-                 <input type="text" name="mapUrl" value={formData.mapUrl} onChange={handleChange} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none transition-all text-sm font-mono text-slate-600" />
+                 <input type="text" name="mapUrl" value={formData.mapUrl} onChange={handleChange} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none transition-all text-sm font-mono text-slate-600" placeholder="src URL from Google Maps" />
                </div>
             </div>
 
@@ -176,10 +181,7 @@ const EditHotel = () => {
             <div>
                <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-6 border-b border-slate-100 pb-2">Property Image</h3>
                
-               {/* Current/New Image Preview */}
                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-                  
-                  {/* Upload Area */}
                   <div
                     onDragOver={onDragOver}
                     onDragLeave={onDragLeave}
@@ -194,13 +196,12 @@ const EditHotel = () => {
                     <input type="file" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onChange={onFileSelect} />
                   </div>
 
-                  {/* Preview Area */}
                   <div className="relative h-48 w-full rounded-xl overflow-hidden shadow-sm border border-slate-200">
                     {formData.image ? (
                         <>
                            <img src={getImageUrl(formData.image)} alt="Preview" className="w-full h-full object-cover" />
                            <div className="absolute top-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded">
-                             {uploading ? "Uploading..." : "Current Preview"}
+                             {uploading ? "Uploading..." : "Current Image"}
                            </div>
                         </>
                     ) : (
@@ -229,10 +230,7 @@ const EditHotel = () => {
                     type="submit"
                     disabled={uploading}
                     className={`px-8 py-3 rounded-lg font-bold text-white shadow-md transition-all
-                    ${uploading 
-                        ? 'bg-slate-400 cursor-not-allowed' 
-                        : 'bg-slate-900 hover:bg-slate-800 hover:shadow-lg active:transform active:scale-95'
-                    }`}
+                    ${uploading ? 'bg-slate-400 cursor-not-allowed' : 'bg-slate-900 hover:bg-slate-800 active:scale-95'}`}
                 >
                     {uploading ? 'Processing...' : 'Save Changes'}
                 </button>

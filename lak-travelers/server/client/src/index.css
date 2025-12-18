@@ -1,17 +1,69 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Default Styles Reset */
-body {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-  background-color: #f3f4f6; /* ලා අළු පාට පසුබිමක් */
+@layer base {
+  html {
+    /* සුමටව Scroll වීම සඳහා */
+    scroll-behavior: smooth;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    /* වඩාත් වෘත්තීය Font එකක් ලබා දීම */
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    background-color: #f8fafc; /* පිරිසිදු ලා අළු පාටක් */
+    color: #0f172a; /* Slate-900 පාට (ඇසට පහසුයි) */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
 }
 
-/* සම්පූර්ණ Screen එකම ගන්න */
-#root {
-  width: 100%;
-  min-height: 100vh;
+/* 🌀 Global Transitions (සියලුම Buttons සහ Links වලට සුමට බවක් ලබා දෙයි) */
+a, button {
+  transition: all 0.2s ease-in-out;
+}
+
+/* 🖼️ Image Default Logic */
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* 📑 Custom Scrollbar (වෙබ් අඩවියේ අලංකාරය සඳහා) */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* ⚡ Fade-in Animation (පිටු Load වන විට පෙන්වන අලංකාරය) */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s ease-out forwards;
 }

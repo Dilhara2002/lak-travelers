@@ -4,21 +4,24 @@ import Hotel from '../models/Hotel.js';
 import Tour from '../models/Tour.js';
 import Vehicle from '../models/Vehicle.js';
 
-// @desc    Create new booking with Price Calculation
-// @route   POST /api/bookings
-// @access  Private
+/**
+ * @desc    නව වෙන්කිරීමක් සිදු කිරීම (Create Booking)
+ * @route   POST /api/bookings
+ * @access  Private
+ */
 const createBooking = asyncHandler(async (req, res) => {
   const { 
     bookingType, 
     hotelId, tourId, vehicleId, 
     checkInDate, checkOutDate, 
     tourDate, peopleCount, 
-    pickupDate, pickupLocation 
+    pickupDate, returnDate, // Vehicle සඳහා returnDate එකතු කළා
+    pickupLocation 
   } = req.body;
 
   let totalPrice = 0;
   let bookingData = {
-    user: req.user._id,
+    user: req.user._id, // Auth Middleware එකෙන් ලැබෙන ID එක
     bookingType,
   };
 
@@ -29,8 +32,7 @@ const createBooking = asyncHandler(async (req, res) => {
 
     const start = new Date(checkInDate);
     const end = new Date(checkOutDate);
-    const timeDiff = end - start;
-    const nights = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+    const nights = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
     const validNights = nights > 0 ? nights : 1;
 
     totalPrice = validNights * hotel.pricePerNight;
@@ -52,55 +54,63 @@ const createBooking = asyncHandler(async (req, res) => {
     const vehicle = await Vehicle.findById(vehicleId);
     if (!vehicle) { res.status(404); throw new Error('Vehicle not found'); }
 
-    totalPrice = vehicle.pricePerDay;
-    bookingData = { ...bookingData, vehicle: vehicleId, pickupDate, pickupLocation, totalPrice };
+    // දින ගණන අනුව මිල ගණනය කිරීම (වැඩිදියුණු කළා)
+    const start = new Date(pickupDate);
+    const end = returnDate ? new Date(returnDate) : new Date(pickupDate);
+    const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) || 1;
+
+    totalPrice = vehicle.pricePerDay * days;
+    bookingData = { ...bookingData, vehicle: vehicleId, pickupDate, returnDate, pickupLocation, totalPrice };
   }
 
   const booking = await Booking.create(bookingData);
   res.status(201).json(booking);
 });
 
-// @desc    Get all bookings (Admin)
-// @route   GET /api/bookings
-// @access  Private/Admin
+/**
+ * @desc    සියලුම වෙන්කිරීම් බැලීම (Admin Only)
+ */
 const getBookings = asyncHandler(async (req, res) => {
-    const bookings = await Booking.find().populate('user', 'id name email');
+    const bookings = await Booking.find()
+      .populate('user', 'name email')
+      .populate('hotel', 'name')
+      .populate('tour', 'name')
+      .populate('vehicle', 'vehicleModel');
     res.json(bookings);
 });
 
-// @desc    Get logged in user bookings
-// @route   GET /api/bookings/mybookings
-// @access  Private
+/**
+ * @desc    ලොග් වී සිටින පරිශීලකයාගේ වෙන්කිරීම් බැලීම
+ */
 const getMyBookings = asyncHandler(async (req, res) => {
-  // 👇 හෝටල්, Tours, Vehicles වල නම සහ පින්තූරය (image) එන්න ඕනේ නිසා populate කරනවා
+  // 401 Error එක මගහරවා ගැනීමට req.user._id නිවැරදිව ලැබිය යුතුයි
   const bookings = await Booking.find({ user: req.user._id })
-    .populate('hotel', 'name image location')       // Hotel details
-    .populate('tour', 'name image destinations')    // Tour details
-    .populate('vehicle', 'vehicleModel images type'); // Vehicle details (Note: vehicle has 'images' array)
+    .populate('hotel', 'name image location')
+    .populate('tour', 'name image destinations')
+    .populate('vehicle', 'vehicleModel images type');
 
   res.json(bookings);
 });
 
-// @desc    Cancel/Delete booking
-// @route   DELETE /api/bookings/:id
-// @access  Private
+/**
+ * @desc    වෙන්කිරීමක් අවලංගු කිරීම
+ */
 const cancelBooking = asyncHandler(async (req, res) => {
     const booking = await Booking.findById(req.params.id);
   
     if (booking) {
-      // Booking එක අයිති User ට හෝ Admin ට විතරයි Cancel කරන්න පුළුවන්
+      // ආරක්ෂක පියවර: අයිතිකරුට හෝ ඇඩ්මින්ට පමණක් අවසරය
       if(booking.user.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
           res.status(401);
           throw new Error('Not authorized to cancel this booking');
       }
 
       await booking.deleteOne();
-      res.json({ message: 'Booking removed' });
+      res.json({ message: 'Booking removed successfully' });
     } else {
       res.status(404);
       throw new Error('Booking not found');
     }
 });
 
-// 👇 Export එකේ cancelBooking තියෙනවද කියලා හොඳට බලන්න
 export { createBooking, getBookings, getMyBookings, cancelBooking };

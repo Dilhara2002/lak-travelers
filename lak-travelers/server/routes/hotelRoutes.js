@@ -1,26 +1,29 @@
 import express from 'express';
-import { getHotels, createHotel, deleteHotel, getHotelById, updateHotel, createHotelReview } from '../controllers/hotelController.js';
-import { protect } from '../middleware/authMiddleware.js'; // Login වෙලාද බලන්න
-
-
+import { 
+  getHotels, 
+  createHotel, 
+  deleteHotel, 
+  getHotelById, 
+  updateHotel, 
+  createHotelReview 
+} from '../controllers/hotelController.js';
+import { protect } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-// GET ඉල්ලුවොත් හෝටල් පෙන්නන්න, POST කළොත් අලුත් හෝටලයක් හදන්න
+// 1. සියලුම හෝටල් බැලීම සහ අලුත් හෝටලයක් ඇතුළත් කිරීම
 router.route('/')
-  .get(getHotels)
-  .post(protect, createHotel); // 'protect' දැම්මාම login වෙලා ඉන්න ඕනේ
+  .get(getHotels)             // Public: ඕනෑම අයෙකුට බැලිය හැක
+  .post(protect, createHotel); // Private: Vendor/Admin පමණි
 
+// 2. තනි හෝටලයක් බැලීම, මැකීම සහ යාවත්කාලීන කිරීම
 router.route('/:id')
-  .get(getHotelById)          // හෝටල් විස්තර ගන්න
-  .delete(protect, deleteHotel);
+  .get(getHotelById)          // Public: විස්තර බැලීමට
+  .put(protect, updateHotel)  // Private: Edit කිරීමට
+  .delete(protect, deleteHotel); // Private: Delete කිරීමට
 
-router.route('/:id')
-  .get(getHotelById)
-  .delete(protect, deleteHotel)
-  .put(protect, updateHotel); // 👈 අලුත් Edit Route එක
-
+// 3. සමාලෝචන (Reviews) එක් කිරීම
 router.route('/:id/reviews')
-  .post(protect, createHotelReview);
+  .post(protect, createHotelReview); // Private: ලොග් වූ අයට පමණි
 
 export default router;

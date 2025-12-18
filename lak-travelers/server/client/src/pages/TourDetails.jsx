@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import API from '../services/api';
-import axios from 'axios';
+import API from '../services/api'; // අපි සාදාගත් API instance එක භාවිතා කරමු
 
 const TourDetails = () => {
   const { id } = useParams();
@@ -22,20 +21,28 @@ const TourDetails = () => {
 
   const user = JSON.parse(localStorage.getItem('userInfo'));
 
+  /**
+   * ටුවර් පැකේජයේ දත්ත ලබා ගැනීම
+   */
+  const fetchTour = async () => {
+    try {
+      const { data } = await API.get(`/tours/${id}`);
+      setTour(data);
+      setLoading(false);
+    } catch (error) {
+      console.error("Fetch Tour Error:", error);
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchTour = async () => {
-      try {
-        const { data } = await API.get(`/tours/${id}`);
-        setTour(data);
-        setLoading(false);
-      } catch (error) {
-        console.error(error);
-        setLoading(false);
-      }
-    };
     fetchTour();
+    // eslint-disable-next-line
   }, [id]);
 
+  /**
+   * ටුවර් පැකේජය මැකීම (Delete)
+   */
   const handleDelete = async () => {
     if (window.confirm("Are you sure you want to delete this tour package? ⚠️")) {
       try {
@@ -48,6 +55,9 @@ const TourDetails = () => {
     }
   };
 
+  /**
+   * ටුවර් එකක් වෙන් කිරීම (Booking)
+   */
   const handleBooking = async (e) => {
     e.preventDefault();
     try {
@@ -60,29 +70,41 @@ const TourDetails = () => {
       alert("Tour Booked Successfully! 🚐🎉");
       navigate('/my-bookings');
     } catch (error) {
-      console.error(error);
-      alert("Booking Failed! Please Login.");
-      navigate('/login');
+      console.error("Booking Error:", error);
+      alert(error.response?.data?.message || "Booking Failed! Please Login.");
+      if (error.response?.status === 401) navigate('/login');
     }
   };
 
+  /**
+   * Review එක සඳහා පින්තූරයක් Upload කිරීම (Cloudinary)
+   */
   const handleReviewImageUpload = async (e) => {
     const file = e.target.files[0];
+    if (!file) return;
+
     const formData = new FormData();
     formData.append('image', file);
     setUploading(true);
+
     try {
-      const config = { headers: { 'Content-Type': 'multipart/form-data' } };
-      const { data } = await axios.post('http://localhost:5001/api/upload', formData, config);
+      // ⚠️ API භාවිතා කිරීමෙන් CORS සහ 401 දෝෂ මගහැරේ
+      const { data } = await API.post('/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
       setReviewImage(data);
       setUploading(false);
+      alert("Review photo uploaded! 📸");
     } catch (error) {
-      console.error(error);
+      console.error("Upload Error:", error);
       setUploading(false);
       alert('Image upload failed');
     }
   };
 
+  /**
+   * Review එක Submit කිරීම
+   */
   const submitReviewHandler = async (e) => {
     e.preventDefault();
     if (rating === 0) return alert("Please select a star rating! ⭐");
@@ -93,22 +115,23 @@ const TourDetails = () => {
       setComment('');
       setRating(0);
       setReviewImage('');
-      
-      const { data } = await API.get(`/tours/${id}`);
-      setTour(data);
+      fetchTour(); // Refresh data
     } catch (error) {
       alert(error.response?.data?.message || "Review Failed");
     }
   };
 
+  /**
+   * පින්තූර URL එක සකසන Helper Function එක
+   */
   const getImageUrl = (imagePath) => {
-    if (!imagePath) return "https://via.placeholder.com/800x400?text=No+Image";
+    if (!imagePath) return "https://via.placeholder.com/800x400?text=No+Image+Found";
     if (imagePath.startsWith("http")) return imagePath;
+    const backendURL = "https://lak-travelers-api.vercel.app"; // ඔබේ Vercel Backend URL එක
     const cleanPath = imagePath.startsWith("/") ? imagePath : `/${imagePath}`;
-    return `http://localhost:5001${cleanPath}`;
+    return `${backendURL}${cleanPath}`;
   };
 
-  // Helper for Rating Labels
   const getRatingLabel = (r) => {
     switch (r) {
       case 5: return "Excellent 😍";
@@ -120,7 +143,7 @@ const TourDetails = () => {
     }
   };
 
-  if (loading) return <div className="min-h-screen flex justify-center items-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-600"></div></div>;
+  if (loading) return <div className="min-h-screen flex justify-center items-center bg-white"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-600"></div></div>;
   if (!tour) return <div className="text-center mt-20 text-xl font-bold text-gray-600">Tour not found 😕</div>;
 
   return (
@@ -135,16 +158,16 @@ const TourDetails = () => {
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
         
-        <div className="absolute bottom-0 left-0 p-6 md:p-12 text-white max-w-5xl mx-auto w-full">
+        <div className="absolute bottom-0 left-0 p-6 md:p-12 text-white max-w-7xl mx-auto w-full">
            <div className="flex items-center gap-3 mb-2">
-              <span className="bg-green-600 text-xs font-bold px-2 py-1 rounded uppercase tracking-wider">
+              <span className="bg-green-600 text-xs font-bold px-3 py-1 rounded uppercase tracking-wider">
                 {tour.duration}
               </span>
-              <span className="flex items-center gap-1 text-sm bg-black/40 px-2 py-1 rounded backdrop-blur-sm border border-white/20">
+              <span className="flex items-center gap-1 text-sm bg-black/40 px-3 py-1 rounded backdrop-blur-sm border border-white/20">
                 📍 {tour.destinations}
               </span>
            </div>
-           <h1 className="text-4xl md:text-5xl font-extrabold mb-2 text-shadow-lg">{tour.name}</h1>
+           <h1 className="text-4xl md:text-5xl font-extrabold mb-2">{tour.name}</h1>
            <div className="flex items-center gap-4 text-lg">
              <span className="text-yellow-400 font-bold text-xl">⭐ {tour.rating ? tour.rating.toFixed(1) : "New"}</span>
              <span className="opacity-80">| {tour.numReviews} Reviews</span>
@@ -152,33 +175,31 @@ const TourDetails = () => {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 md:px-8 -mt-8 relative z-10 grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="container mx-auto px-4 md:px-8 -mt-8 relative z-10 grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-7xl">
         
         {/* 2. MAIN CONTENT (Left) */}
         <div className="lg:col-span-2 space-y-8">
           
-          {/* About Section */}
+          {/* Overview */}
           <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-bold text-gray-800">Tour Overview</h2>
-              {/* Admin Actions */}
-              {user && (user.role === 'admin' || (tour.user && user._id === tour.user.toString())) && (
+              {user && (user.role === 'admin' || (tour.user && (user._id === tour.user || user._id === tour.user?._id))) && (
                 <div className="flex gap-3">
                   <button onClick={() => navigate(`/edit-tour/${tour._id}`)} className="text-blue-600 font-bold hover:underline">Edit</button>
                   <button onClick={handleDelete} className="text-red-500 font-bold hover:underline">Delete</button>
                 </div>
               )}
             </div>
-
             <p className="text-gray-600 leading-relaxed text-lg whitespace-pre-line">{tour.description}</p>
           </div>
 
-          {/* Map Section */}
+          {/* Map */}
           {tour.mapUrl && (
              <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
               <h3 className="text-xl font-bold mb-4 text-gray-800">Route Map 🗺️</h3>
               <div className="w-full h-80 rounded-xl overflow-hidden bg-gray-100">
-                <iframe src={tour.mapUrl} width="100%" height="100%" style={{ border: 0 }} allowFullScreen="" loading="lazy"></iframe>
+                <iframe src={tour.mapUrl} width="100%" height="100%" style={{ border: 0 }} allowFullScreen="" title="Tour Route"></iframe>
               </div>
             </div>
           )}
@@ -199,29 +220,27 @@ const TourDetails = () => {
 
             {/* Reviews List */}
             {tour.reviews.length === 0 ? (
-               <div className="text-center py-10">
-                 <p className="text-gray-400 italic">No reviews yet.</p>
-               </div>
+               <div className="text-center py-10 italic text-gray-400">No reviews yet.</div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
                 {tour.reviews.map((review) => (
                   <div key={review._id} className="flex flex-col gap-3">
                     <div className="flex items-center gap-3">
-                       <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600 font-bold border border-green-200">
+                       <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center text-green-600 font-bold border border-green-100">
                          {review.name.charAt(0).toUpperCase()}
                        </div>
                        <div>
                          <p className="font-bold text-gray-900 leading-tight">{review.name}</p>
                          <div className="flex text-yellow-400 text-xs">
                             {[...Array(5)].map((_, i) => (
-                              <span key={i}>{i < review.rating ? "★" : "☆"}</span>
+                              <span key={i} className="text-sm">{i < review.rating ? "★" : "☆"}</span>
                             ))}
                          </div>
                        </div>
                     </div>
-                    <p className="text-gray-600 text-sm leading-relaxed">{review.comment}</p>
+                    <p className="text-gray-600 text-sm italic">"{review.comment}"</p>
                     {review.image && (
-                      <img src={getImageUrl(review.image)} alt="Review" className="h-16 w-16 object-cover rounded-lg border border-gray-200" />
+                      <img src={getImageUrl(review.image)} alt="Review" className="h-16 w-16 object-cover rounded-lg border border-gray-100" />
                     )}
                   </div>
                 ))}
@@ -233,7 +252,6 @@ const TourDetails = () => {
               <h3 className="text-lg font-bold mb-4">Write a Review ✍️</h3>
               {user ? (
                 <form onSubmit={submitReviewHandler} className="space-y-4">
-                  {/* Star Rating */}
                   <div>
                     <label className="block text-sm font-bold text-gray-700 mb-2">
                       Rating: <span className="text-green-600 font-normal ml-1">{getRatingLabel(hoverRating || rating)}</span>
@@ -258,39 +276,40 @@ const TourDetails = () => {
 
                   <textarea 
                     rows="3" 
-                    className="w-full p-4 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-green-500" 
-                    placeholder="Share your tour experience..." 
+                    className="w-full p-4 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-green-500 resize-none" 
+                    placeholder="How was your tour experience?" 
                     value={comment} 
                     onChange={(e) => setComment(e.target.value)} 
                     required
                   ></textarea>
 
                   <div className="flex justify-between items-center">
-                    <input type="file" onChange={handleReviewImageUpload} className="text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-white file:text-green-700 hover:file:bg-green-50"/>
-                    <button type="submit" disabled={uploading} className="bg-gray-900 text-white px-6 py-2 rounded-lg font-bold hover:bg-gray-800 transition">
-                      {uploading ? 'Wait...' : 'Submit'}
+                    <input type="file" onChange={handleReviewImageUpload} className="text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-green-600 file:text-white cursor-pointer"/>
+                    <button type="submit" disabled={uploading} className="bg-gray-900 text-white px-8 py-2 rounded-xl font-bold hover:bg-gray-800 transition disabled:opacity-50">
+                      {uploading ? 'Processing...' : 'Submit Review'}
                     </button>
                   </div>
                 </form>
               ) : (
-                <div className="text-sm text-gray-500">Please <a href="/login" className="text-blue-600 font-bold hover:underline">log in</a> to review.</div>
+                <div className="text-sm text-gray-500 p-4 border border-dashed border-gray-300 rounded-xl text-center">
+                  Please <a href="/login" className="text-blue-600 font-bold hover:underline">log in</a> to review.
+                </div>
               )}
             </div>
           </div>
         </div>
 
-        {/* 3. SIDEBAR (Sticky Booking) */}
+        {/* 3. SIDEBAR (Booking) */}
         <div className="lg:col-span-1">
           <div className="bg-white p-6 rounded-2xl shadow-xl border border-gray-100 sticky top-28">
             <div className="mb-6">
-              <span className="text-gray-500 text-sm line-through block">Rs {Math.round(tour.price * 1.1)}</span>
               <span className="text-3xl font-extrabold text-green-600">Rs {tour.price.toLocaleString()}</span>
               <span className="text-gray-500 font-medium"> / person</span>
             </div>
 
             <form onSubmit={handleBooking} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Select Date</label>
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Travel Date</label>
                 <input 
                   type="date" 
                   className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-green-500" 
@@ -301,7 +320,7 @@ const TourDetails = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Number of People</label>
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Number of Travelers</label>
                 <input 
                   type="number" 
                   min="1" 
@@ -312,27 +331,22 @@ const TourDetails = () => {
                 />
               </div>
 
-              {/* Total Calculation */}
-              <div className="flex justify-between items-center py-2 border-t border-gray-100 mt-2">
+              <div className="flex justify-between items-center py-3 border-t border-gray-100 mt-2">
                  <span className="font-bold text-gray-700">Total Price:</span>
-                 <span className="font-bold text-lg text-green-700">LKR {(tour.price * peopleCount).toLocaleString()}</span>
+                 <span className="font-bold text-xl text-green-700">LKR {(tour.price * peopleCount).toLocaleString()}</span>
               </div>
 
-              <button type="submit" className="w-full bg-green-600 text-white py-4 rounded-xl font-bold text-lg hover:shadow-lg hover:bg-green-700 transition transform active:scale-95">
+              <button type="submit" className="w-full bg-green-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-green-700 transition shadow-lg active:scale-95">
                 Book Adventure 🚐
               </button>
-              
-              <p className="text-center text-xs text-gray-400 mt-2">No hidden booking fees</p>
             </form>
 
             <div className="mt-6 pt-6 border-t border-gray-100 space-y-2 text-xs text-gray-500">
-               <div className="flex items-center gap-2"><span className="text-green-500">✔</span> Experienced Guide</div>
-               <div className="flex items-center gap-2"><span className="text-green-500">✔</span> Transport Included</div>
+               <div className="flex items-center gap-2"><span className="text-green-500">✔</span> Professional Guide</div>
                <div className="flex items-center gap-2"><span className="text-green-500">✔</span> Free Cancellation (24h)</div>
             </div>
           </div>
         </div>
-
       </div>
     </div>
   );

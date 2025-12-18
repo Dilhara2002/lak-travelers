@@ -2,21 +2,30 @@ import { Link } from 'react-router-dom';
 
 const VehicleCard = ({ vehicle, onDelete, user }) => {
 
-  // Prevent admin actions from triggering the main card click
+  // Edit/Delete බොත්තම් එබූ විට Card එකේ ප්‍රධාන Link එක වැඩ කිරීම වැළැක්වීමට
   const handleAction = (e, action) => {
     e.preventDefault();
     e.stopPropagation();
     if (action) action();
   };
 
+  /**
+   * පින්තූරයේ URL එක ලබා දෙන Helper Function එක.
+   * Cloudinary සහ Localhost යන දෙකටම ගැළපෙන සේ සකසා ඇත.
+   */
   const getImageUrl = (imagePath) => {
     if (!imagePath) return "https://via.placeholder.com/400x300?text=No+Image";
+    
+    // පින්තූරය Cloudinary (http/https) URL එකක් නම් එය එලෙසම පෙන්වයි
     if (imagePath.startsWith("http")) return imagePath;
+    
+    // පැරණි local පින්තූර තිබේ නම් (Vercel Backend එක හරහා)
+    const backendURL = "https://lak-travelers-api.vercel.app"; // ඔබේ Backend URL එක මෙතැනට ඇතුළත් කරන්න
     const cleanPath = imagePath.startsWith("/") ? imagePath : `/${imagePath}`;
-    return `http://localhost:5001${cleanPath}`;
+    return `${backendURL}${cleanPath}`;
   };
 
-  // Safe Image Access (Get first image or empty string)
+  // පළමු පින්තූරය තෝරා ගැනීම
   const displayImage = vehicle.images && vehicle.images.length > 0 ? vehicle.images[0] : "";
 
   return (
@@ -32,10 +41,12 @@ const VehicleCard = ({ vehicle, onDelete, user }) => {
           src={getImageUrl(displayImage)}
           alt={vehicle.vehicleModel}
           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-          onError={(e) => {e.target.onerror = null; e.target.src="https://via.placeholder.com/400x300?text=Vehicle"}}
+          onError={(e) => {
+            e.target.onerror = null; 
+            e.target.src="https://via.placeholder.com/400x300?text=Vehicle+Image"
+          }}
         />
         
-        {/* Dark Gradient Overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-80" />
 
         {/* Top Left: Driver Badge */}
@@ -43,7 +54,7 @@ const VehicleCard = ({ vehicle, onDelete, user }) => {
           <span className="text-yellow-400">👨‍✈️</span> {vehicle.driverName}
         </div>
 
-        {/* Top Right: Admin Buttons (Vendor/Admin Only) */}
+        {/* Admin Buttons (Vendor/Admin Only) */}
         {user && (user.role === 'vendor' || user.role === 'admin') && (
           <div className="absolute top-4 right-4 flex gap-2 z-20">
             <Link
@@ -64,7 +75,7 @@ const VehicleCard = ({ vehicle, onDelete, user }) => {
           </div>
         )}
 
-        {/* Bottom Left: Price Badge */}
+        {/* Price Badge */}
         <div className="absolute bottom-4 left-4 z-10">
            <div className="bg-white/90 backdrop-blur-md px-4 py-2 rounded-xl shadow-lg border border-white/50">
              <span className="block text-xs text-gray-500 font-bold uppercase tracking-wider">Per Day</span>
@@ -93,10 +104,15 @@ const VehicleCard = ({ vehicle, onDelete, user }) => {
             </span>
         </div>
 
-        {/* Contact Info */}
-        <div className="flex items-center gap-2 text-gray-500 text-sm mb-4">
-            <span className="bg-green-50 text-green-600 p-1 rounded-full">📞</span>
-            <span className="font-medium">{vehicle.contactNumber}</span>
+        {/* Rating & Contact Row */}
+        <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2 text-gray-500 text-sm">
+                <span className="bg-green-50 text-green-600 p-1 rounded-full text-xs">📞</span>
+                <span className="font-medium">{vehicle.contactNumber}</span>
+            </div>
+            <div className="flex items-center gap-1 text-yellow-500 font-bold text-sm">
+                <span>⭐</span> {vehicle.rating > 0 ? vehicle.rating.toFixed(1) : "New"}
+            </div>
         </div>
 
         {/* Bottom Action Row */}

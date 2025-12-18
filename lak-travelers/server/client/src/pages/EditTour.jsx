@@ -1,13 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import axios from 'axios';
-import API from '../services/api';
+import API from '../services/api'; // අපි සාදාගත් API instance එක
 
 const EditTour = () => {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  // 1. Separate State for Duration Logic
+  // 1. Duration Logic සඳහා වෙනම States
   const [durationValue, setDurationValue] = useState('');
   const [durationUnit, setDurationUnit] = useState('Days');
 
@@ -17,22 +16,22 @@ const EditTour = () => {
     duration: '',
     price: '',
     groupSize: '',
-    description: '', // Added description
+    description: '', 
     image: '',
-    mapUrl: '',      // Added mapUrl
+    mapUrl: '',      
   });
 
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
 
-  // 2. Fetch Data & Parse Duration
+  // 2. දත්ත ලබා ගැනීම සහ Duration එක Parse කිරීම
   useEffect(() => {
     const fetchTour = async () => {
       try {
         const { data } = await API.get(`/tours/${id}`);
         
-        // Split "3 Days" into "3" and "Days" for the inputs
+        // "3 Days" වැනි දත්ත "3" සහ "Days" ලෙස වෙන් කරයි
         if (data.duration) {
             const parts = data.duration.split(' ');
             if (parts.length >= 2) {
@@ -44,38 +43,39 @@ const EditTour = () => {
         }
 
         setFormData({
-            name: data.name,
-            destinations: data.destinations,
-            duration: data.duration,
-            price: data.price,
-            groupSize: data.groupSize,
+            name: data.name || '',
+            destinations: data.destinations || '',
+            duration: data.duration || '',
+            price: data.price || '',
+            groupSize: data.groupSize || '',
             description: data.description || '',
-            image: data.image,
+            image: data.image || '',
             mapUrl: data.mapUrl || ''
         });
         setLoading(false);
       } catch (error) {
-        console.error(error);
-        alert("Error fetching tour data");
+        console.error("Fetch Error:", error);
+        alert("Error loading tour data. Redirecting...");
         navigate('/tours');
       }
     };
     fetchTour();
   }, [id, navigate]);
 
-  // 3. Handlers
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // Special Handler for Duration Inputs
+  // Duration වෙනස් වන විට formData ද Update කරයි
   const handleDurationUpdate = (val, unit) => {
       setDurationValue(val);
       setDurationUnit(unit);
       setFormData(prev => ({ ...prev, duration: `${val} ${unit}` }));
   };
 
-  // Image Upload Logic
+  /**
+   * 🖼️ නව පින්තූරයක් Cloudinary වෙත උඩුගත කිරීම
+   */
   const handleFileUpload = async (file) => {
     if (!file) return;
     setUploading(true);
@@ -84,12 +84,15 @@ const EditTour = () => {
     data.append('image', file);
 
     try {
-      const config = { headers: { 'Content-Type': 'multipart/form-data' } };
-      const res = await axios.post('http://localhost:5001/api/upload', data, config);
+      // ⚠️ API භාවිතා කිරීමෙන් CORS සහ Authentication දෝෂ මගහැරේ
+      const res = await API.post('/upload', data, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
       setFormData((prev) => ({ ...prev, image: res.data }));
+      alert("Image updated successfully! ✅");
     } catch (error) {
-      console.error(error);
-      alert('Image upload failed! ❌');
+      console.error("Upload Error:", error);
+      alert(error.response?.data?.message || 'Image upload failed! ❌');
     } finally {
       setUploading(false);
     }
@@ -104,20 +107,28 @@ const EditTour = () => {
     handleFileUpload(e.dataTransfer.files[0]);
   };
 
+  /**
+   * පින්තූර පෙන්වීම සඳහා URL එක සකසන Helper Function එක
+   */
   const getImageUrl = (path) => {
-    if (!path) return '';
-    return path.startsWith("http") ? path : `http://localhost:5001${path}`;
+    if (!path) return "https://via.placeholder.com/400x300?text=No+Image";
+    if (path.startsWith("http")) return path;
+    const backendURL = "https://lak-travelers-api.vercel.app"; // ඔබේ Backend URL එක
+    return `${backendURL}${path.startsWith("/") ? path : `/${path}`}`;
   };
 
+  /**
+   * 🚐 ටුවර් පැකේජය යාවත්කාලීන කිරීම (Update)
+   */
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
       await API.put(`/tours/${id}`, formData);
-      alert('Tour Updated Successfully! ✅');
-      navigate(`/tours/${id}`); // Redirect to details
+      alert('Tour Package Updated Successfully! ✅');
+      navigate(`/tours/${id}`); 
     } catch (error) {
-      console.error(error);
-      alert('Failed to update tour');
+      console.error("Update Error:", error);
+      alert(error.response?.data?.message || 'Failed to update tour');
     }
   };
 
@@ -131,7 +142,7 @@ const EditTour = () => {
     <div className="min-h-screen bg-slate-50 py-12 px-4 sm:px-6 lg:px-8 font-sans">
       <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         
-        {/* Professional Header */}
+        {/* Header */}
         <div className="bg-slate-900 px-8 py-6 flex justify-between items-center">
           <div>
             <h2 className="text-xl font-semibold text-white tracking-wide">Edit Tour Package</h2>
@@ -153,22 +164,19 @@ const EditTour = () => {
                <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-6 border-b border-slate-100 pb-2">Tour Details</h3>
                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                  
-                 {/* Name */}
                  <div className="col-span-2">
                     <label className="block text-sm font-medium text-slate-700 mb-2">Package Name</label>
-                    <input type="text" name="name" value={formData.name} onChange={handleChange} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none transition-all" />
+                    <input type="text" name="name" value={formData.name} onChange={handleChange} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none transition-all" required />
                  </div>
 
-                 {/* Destinations */}
                  <div className="col-span-2">
                     <label className="block text-sm font-medium text-slate-700 mb-2">Destinations</label>
                     <div className="relative">
                         <span className="absolute left-3 top-3 text-slate-400">📍</span>
-                        <input type="text" name="destinations" value={formData.destinations} onChange={handleChange} className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none transition-all" />
+                        <input type="text" name="destinations" value={formData.destinations} onChange={handleChange} className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none transition-all" required />
                     </div>
                  </div>
 
-                 {/* Duration (Split Inputs) */}
                  <div>
                     <label className="block text-sm font-medium text-slate-700 mb-2">Duration</label>
                     <div className="flex gap-2">
@@ -179,6 +187,7 @@ const EditTour = () => {
                                 value={durationValue} 
                                 onChange={(e) => handleDurationUpdate(e.target.value, durationUnit)} 
                                 className="w-full pl-9 pr-2 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none"
+                                required
                             />
                         </div>
                         <div className="w-1/2">
@@ -196,36 +205,34 @@ const EditTour = () => {
                     </div>
                  </div>
 
-                 {/* Group Size */}
                  <div>
                     <label className="block text-sm font-medium text-slate-700 mb-2">Max Group Size</label>
                     <div className="relative">
                         <span className="absolute left-3 top-3 text-slate-400">👥</span>
-                        <input type="number" name="groupSize" value={formData.groupSize} onChange={handleChange} className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none transition-all" />
+                        <input type="number" name="groupSize" value={formData.groupSize} onChange={handleChange} className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none transition-all" required />
                     </div>
                  </div>
 
-                 {/* Price */}
                  <div>
                     <label className="block text-sm font-medium text-slate-700 mb-2">Price Per Person (LKR)</label>
                     <div className="relative">
                         <span className="absolute left-3 top-3 text-slate-400 font-bold text-xs">Rs</span>
-                        <input type="number" name="price" value={formData.price} onChange={handleChange} className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none transition-all" />
+                        <input type="number" name="price" value={formData.price} onChange={handleChange} className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none transition-all" required />
                     </div>
                  </div>
                </div>
             </div>
 
-            {/* SECTION 2: DESCRIPTION & MAP */}
+            {/* SECTION 2: MAP & DESCRIPTION */}
             <div>
                <div className="mb-6">
-                 <label className="block text-sm font-medium text-slate-700 mb-2">Description</label>
-                 <textarea name="description" rows="5" value={formData.description} onChange={handleChange} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none transition-all resize-none"></textarea>
+                 <label className="block text-sm font-medium text-slate-700 mb-2">Tour Description</label>
+                 <textarea name="description" rows="5" value={formData.description} onChange={handleChange} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none transition-all resize-none" required></textarea>
                </div>
 
                <div className="mb-6">
-                 <label className="block text-sm font-medium text-slate-700 mb-2">Route Map Embed URL</label>
-                 <input type="text" name="mapUrl" value={formData.mapUrl} onChange={handleChange} placeholder='src="https://..."' className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none transition-all text-sm font-mono text-slate-600" />
+                 <label className="block text-sm font-medium text-slate-700 mb-2">Route Map URL</label>
+                 <input type="text" name="mapUrl" value={formData.mapUrl} onChange={handleChange} placeholder='src URL from Google Maps' className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none transition-all text-sm font-mono text-slate-600" />
                </div>
             </div>
 
@@ -234,8 +241,6 @@ const EditTour = () => {
                <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-6 border-b border-slate-100 pb-2">Cover Image</h3>
                
                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-                  
-                  {/* Upload Area */}
                   <div
                     onDragOver={onDragOver}
                     onDragLeave={onDragLeave}
@@ -250,7 +255,6 @@ const EditTour = () => {
                     <input type="file" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onChange={onFileSelect} />
                   </div>
 
-                  {/* Preview Area */}
                   <div className="relative h-48 w-full rounded-xl overflow-hidden shadow-sm border border-slate-200">
                     {formData.image ? (
                         <img src={getImageUrl(formData.image)} alt="Preview" className="w-full h-full object-cover" />
@@ -261,7 +265,6 @@ const EditTour = () => {
                     {uploading && (
                       <div className="absolute inset-0 bg-slate-900/80 flex flex-col items-center justify-center text-white backdrop-blur">
                         <div className="animate-spin rounded-full h-8 w-8 border-2 border-white border-t-transparent mb-2"></div>
-                        <span className="text-sm font-medium">Uploading...</span>
                       </div>
                     )}
                   </div>
@@ -281,10 +284,7 @@ const EditTour = () => {
                     type="submit"
                     disabled={uploading}
                     className={`px-8 py-3 rounded-lg font-bold text-white shadow-md transition-all
-                    ${uploading 
-                        ? 'bg-slate-400 cursor-not-allowed' 
-                        : 'bg-slate-900 hover:bg-slate-800 hover:shadow-lg active:transform active:scale-95'
-                    }`}
+                    ${uploading ? 'bg-slate-400 cursor-not-allowed' : 'bg-slate-900 hover:bg-slate-800 active:scale-95'}`}
                 >
                     {uploading ? 'Processing...' : 'Save Changes'}
                 </button>

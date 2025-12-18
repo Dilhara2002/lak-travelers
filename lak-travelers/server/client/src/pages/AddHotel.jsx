@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import API from '../services/api';
+import API from '../services/api'; // අපි සාදාගත් API service එක භාවිතා කරමු
+import logoImage from "../assets/logo.png"; 
 
 const AddHotel = () => {
   const navigate = useNavigate();
@@ -19,12 +19,12 @@ const AddHotel = () => {
   const [preview, setPreview] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
 
+  // 🔐 Authorization check (පරිශීලකයා ලොග් වී ඇත්දැයි බැලීම)
   const user = JSON.parse(localStorage.getItem('userInfo'));
 
-  // 🔐 Authorization check
   useEffect(() => {
     if (!user || (user.role !== 'vendor' && user.role !== 'admin')) {
-      alert('Unauthorized Access');
+      alert('Unauthorized Access. Only Vendors and Admins can add hotels.');
       navigate('/');
     }
   }, [user, navigate]);
@@ -34,9 +34,13 @@ const AddHotel = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // 🖼️ Image Upload (SAME AS ADD TOUR)
+  /**
+   * 🖼️ පින්තූරය Cloudinary වෙත උඩුගත කිරීම
+   */
   const handleFileUpload = async (file) => {
     if (!file) return;
+    
+    // Preview එක පෙන්වීම
     setPreview(URL.createObjectURL(file));
     setUploading(true);
 
@@ -44,16 +48,18 @@ const AddHotel = () => {
     data.append('image', file);
 
     try {
-      const config = { headers: { 'Content-Type': 'multipart/form-data' } };
-      const res = await axios.post(
-        'https://lak-travelers-z1uk.vercel.app/api/upload',
-        data,
-        config
-      );
+      // අපි Backend එකේ සකස් කළ /api/upload route එකට දත්ත යවයි
+      // මෙහිදී 'API' භාවිතා කිරීමෙන් CORS ගැටලුව මගහැරේ
+      const res = await API.post('/upload', data, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      
+      // Cloudinary මගින් ලැබෙන URL එක formData එකට එකතු කරයි
       setFormData((prev) => ({ ...prev, image: res.data }));
+      alert('Image uploaded successfully! ✅');
     } catch (error) {
-      console.error(error);
-      alert('Image upload failed.');
+      console.error('Upload Error:', error);
+      alert(error.response?.data?.message || 'Image upload failed. Please try again.');
       setPreview(null);
     } finally {
       setUploading(false);
@@ -74,17 +80,21 @@ const AddHotel = () => {
     setFormData((prev) => ({ ...prev, image: '' }));
   };
 
+  /**
+   * 🏨 හෝටල් තොරතුරු සේවාදායකයට (Server) යැවීම
+   */
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.image) return alert('Property image is required.');
 
     try {
+      // Backend එකේ /api/hotels route එකට දත්ත යවයි
       await API.post('/hotels', formData);
       alert('Hotel Added Successfully! 🏨');
       navigate('/hotels');
     } catch (error) {
-      console.error(error);
-      alert('Failed to add hotel.');
+      console.error('Submit Error:', error);
+      alert(error.response?.data?.message || 'Failed to add hotel. Check all fields.');
     }
   };
 
@@ -92,7 +102,7 @@ const AddHotel = () => {
     <div className="min-h-screen bg-slate-50 py-12 px-4 sm:px-6 lg:px-8 font-sans">
       <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
 
-        {/* HEADER – SAME AS ADD TOUR */}
+        {/* HEADER */}
         <div className="bg-slate-900 px-8 py-6 flex justify-between items-center">
           <div>
             <h2 className="text-xl font-semibold text-white tracking-wide">
@@ -112,7 +122,7 @@ const AddHotel = () => {
 
         <form onSubmit={handleSubmit} className="p-8">
 
-          {/* SECTION 1 */}
+          {/* SECTION 1: Details */}
           <div className="space-y-8">
             <div>
               <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-6 border-b border-slate-100 pb-2">
@@ -120,18 +130,15 @@ const AddHotel = () => {
               </h3>
 
               <div className="space-y-6">
-
-                {/* Hotel Name */}
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Hotel Name
-                  </label>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Hotel Name</label>
                   <div className="relative">
                     <span className="absolute left-3 top-3 text-slate-400">🏨</span>
                     <input
                       type="text"
                       name="name"
                       placeholder="e.g. Ella Green Resort"
+                      value={formData.name}
                       onChange={handleChange}
                       className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none transition-all"
                       required
@@ -139,17 +146,15 @@ const AddHotel = () => {
                   </div>
                 </div>
 
-                {/* Location */}
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Location
-                  </label>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Location</label>
                   <div className="relative">
                     <span className="absolute left-3 top-3 text-slate-400">📍</span>
                     <input
                       type="text"
                       name="location"
                       placeholder="e.g. Nuwara Eliya"
+                      value={formData.location}
                       onChange={handleChange}
                       className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none transition-all"
                       required
@@ -157,39 +162,33 @@ const AddHotel = () => {
                   </div>
                 </div>
 
-                {/* Price */}
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Price Per Night (LKR)
-                  </label>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Price Per Night (LKR)</label>
                   <div className="relative">
-                    <span className="absolute left-3 top-3 text-slate-400 font-bold text-xs">
-                      Rs
-                    </span>
+                    <span className="absolute left-3 top-3 text-slate-400 font-bold text-xs">Rs</span>
                     <input
                       type="number"
                       name="pricePerNight"
                       placeholder="15000"
+                      value={formData.pricePerNight}
                       onChange={handleChange}
                       className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none transition-all"
                       required
                     />
                   </div>
                 </div>
-
               </div>
             </div>
 
             {/* DESCRIPTION & MAP */}
             <div>
               <div className="mb-6">
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Property Description
-                </label>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Property Description</label>
                 <textarea
                   name="description"
                   rows="4"
                   placeholder="Describe the hotel and amenities..."
+                  value={formData.description}
                   onChange={handleChange}
                   className="w-full p-4 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none transition-all resize-none"
                   required
@@ -197,20 +196,19 @@ const AddHotel = () => {
               </div>
 
               <div className="mb-6">
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Location Map URL
-                </label>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Location Map URL (Google Maps)</label>
                 <input
                   type="text"
                   name="mapUrl"
-                  placeholder='https://www.google.com/maps/embed?...'
+                  placeholder='https://www.google.com/maps/embed?pb=...'
+                  value={formData.mapUrl}
                   onChange={handleChange}
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none transition-all text-sm font-mono"
                 />
               </div>
             </div>
 
-            {/* IMAGE – EXACT SAME UI AS ADD TOUR */}
+            {/* IMAGE UPLOAD */}
             <div>
               <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-6 border-b border-slate-100 pb-2">
                 Property Image
@@ -222,28 +220,16 @@ const AddHotel = () => {
                   onDragLeave={onDragLeave}
                   onDrop={onDrop}
                   className={`relative group border-2 border-dashed rounded-xl h-48 flex flex-col items-center justify-center transition-all cursor-pointer
-                  ${isDragging
-                      ? 'border-indigo-500 bg-indigo-50'
-                      : 'border-slate-300 hover:border-slate-400 hover:bg-slate-50'
-                    }`}
+                  ${isDragging ? 'border-indigo-500 bg-indigo-50' : 'border-slate-300 hover:border-slate-400 hover:bg-slate-50'}`}
                 >
                   <div className="bg-white p-3 rounded-full shadow-sm mb-3 group-hover:scale-110 transition-transform">
                     <svg className="w-6 h-6 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
-                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14" />
                     </svg>
                   </div>
-                  <p className="text-slate-900 font-medium text-sm">
-                    Drag image here or click to browse
-                  </p>
-                  <p className="text-slate-400 text-xs mt-1">
-                    PNG, JPG (Max 5MB)
-                  </p>
-                  <input
-                    type="file"
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                    onChange={onFileSelect}
-                  />
+                  <p className="text-slate-900 font-medium text-sm">Drag image here or click to browse</p>
+                  <p className="text-slate-400 text-xs mt-1">PNG, JPG, WEBP (Max 5MB)</p>
+                  <input type="file" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onChange={onFileSelect} />
                 </div>
               ) : (
                 <div className="relative h-64 w-full rounded-xl overflow-hidden shadow-sm border border-slate-200 group">
@@ -259,8 +245,8 @@ const AddHotel = () => {
                   </div>
 
                   {uploading && (
-                    <div className="absolute inset-0 bg-slate-900/80 flex items-center justify-center text-white">
-                      Uploading...
+                    <div className="absolute inset-0 bg-slate-900/80 flex items-center justify-center text-white font-bold">
+                      Uploading to Cloud...
                     </div>
                   )}
                 </div>
@@ -268,7 +254,7 @@ const AddHotel = () => {
             </div>
           </div>
 
-          {/* ACTION BAR – SAME AS ADD TOUR */}
+          {/* ACTION BAR */}
           <div className="mt-8 pt-6 border-t border-slate-100 flex justify-end gap-4">
             <button
               type="button"
@@ -281,10 +267,7 @@ const AddHotel = () => {
               type="submit"
               disabled={uploading}
               className={`px-8 py-3 rounded-lg font-bold text-white shadow-md transition-all
-              ${uploading
-                  ? 'bg-slate-400 cursor-not-allowed'
-                  : 'bg-slate-900 hover:bg-slate-800 hover:shadow-lg active:scale-95'
-                }`}
+              ${uploading ? 'bg-slate-400 cursor-not-allowed' : 'bg-slate-900 hover:bg-slate-800 hover:shadow-lg active:scale-95'}`}
             >
               {uploading ? 'Processing...' : 'Publish Hotel 🏨'}
             </button>

@@ -2,18 +2,27 @@ import { Link } from 'react-router-dom';
 
 const TourCard = ({ tour, onDelete, user }) => {
 
-  // Prevent admin actions from triggering the main card click
+  // Edit/Delete බොත්තම් එබූ විට Card එකේ ප්‍රධාන Link එක වැඩ කිරීම වැළැක්වීමට
   const handleAction = (e, action) => {
     e.preventDefault();
     e.stopPropagation();
     if (action) action();
   };
 
+  /**
+   * පින්තූරයේ URL එක ලබා දෙන Helper Function එක.
+   * Cloudinary සහ Localhost යන දෙකටම ගැළපෙන සේ සකසා ඇත.
+   */
   const getImageUrl = (imagePath) => {
     if (!imagePath) return "https://via.placeholder.com/400x300?text=No+Image";
+    
+    // Cloudinary URL එකක් නම් එය කෙලින්ම පෙන්වයි
     if (imagePath.startsWith("http")) return imagePath;
+    
+    // Localhost හෝ Vercel සාපේක්ෂ (Relative) path එකක් නම්
+    const backendURL = "https://lak-travelers-api.vercel.app"; // ඔබේ Backend URL එක මෙතැනට ඇතුළත් කරන්න
     const cleanPath = imagePath.startsWith("/") ? imagePath : `/${imagePath}`;
-    return `http://localhost:5001${cleanPath}`;
+    return `${backendURL}${cleanPath}`;
   };
 
   return (
@@ -29,7 +38,10 @@ const TourCard = ({ tour, onDelete, user }) => {
           src={getImageUrl(tour.image)}
           alt={tour.name}
           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-          onError={(e) => {e.target.onerror = null; e.target.src="https://via.placeholder.com/400x300?text=Image+Not+Found"}}
+          onError={(e) => {
+            e.target.onerror = null; 
+            e.target.src="https://via.placeholder.com/400x300?text=Image+Not+Found"
+          }}
         />
         
         {/* Dark Gradient Overlay */}
@@ -93,8 +105,8 @@ const TourCard = ({ tour, onDelete, user }) => {
 
         {/* Bottom Info Row */}
         <div className="flex items-center justify-between border-t border-gray-100 pt-4 mt-auto">
-          <div className="flex items-center gap-1 text-gray-400 font-medium text-sm">
-            <span>🚐</span> Guided Tour
+          <div className="flex items-center gap-1 text-yellow-500 font-bold text-sm">
+            <span>⭐</span> {tour.rating > 0 ? tour.rating.toFixed(1) : "New"}
           </div>
           <div className="text-green-600 text-sm font-semibold group-hover:translate-x-1 transition-transform flex items-center gap-1">
             View Package 

@@ -5,34 +5,46 @@ import Hotel from '../models/Hotel.js';
 import Tour from '../models/Tour.js';
 import Vehicle from '../models/Vehicle.js';
 
+/**
+ * @desc    Admin Dashboard සඳහා සංඛ්‍යාලේඛන ලබා ගැනීම
+ * @route   GET /api/admin/stats
+ * @access  Private/Admin
+ */
 const getAdminStats = asyncHandler(async (req, res) => {
-  console.log("Admin Stats Request Received..."); // 👇 Check 1
+  console.log("Admin Stats Request Received by:", req.user.name); 
 
-  // 1. Counts ගන්න
-  const usersCount = await User.countDocuments({ role: 'user' });
-  const vendorsCount = await User.countDocuments({ role: 'vendor' });
-  const bookingsCount = await Booking.countDocuments();
-  const hotelsCount = await Hotel.countDocuments();
-  const toursCount = await Tour.countDocuments();
-  const vehiclesCount = await Vehicle.countDocuments();
+  // 1. සියලුම අයිතමයන්ගේ එකතුව (Counts) ලබා ගැනීම
+  // Promise.all භාවිතා කිරීමෙන් එකවර සියලුම Queries ක්‍රියාත්මක වන නිසා වේගය වැඩි වේ.
+  const [
+    usersCount, 
+    vendorsCount, 
+    bookingsCount, 
+    hotelsCount, 
+    toursCount, 
+    vehiclesCount
+  ] = await Promise.all([
+    User.countDocuments({ role: 'user' }),
+    User.countDocuments({ role: 'role' === 'vendor' ? 'vendor' : 'vendor' }), // Role එක නිවැරදිව පරීක්ෂා කිරීම
+    Booking.countDocuments(),
+    Hotel.countDocuments(),
+    Tour.countDocuments(),
+    Vehicle.countDocuments(),
+  ]);
 
-  // 👇 Check 2: මේවා Terminal එකේ Print වෙනවද බලන්න
-  console.log("Counts:", { usersCount, vendorsCount, bookingsCount, hotelsCount, toursCount, vehiclesCount });
+  // 2. මුළු ආදායම (Total Revenue) ගණනය කිරීම
+  // සියලුම Booking දත්ත මතකයට (Memory) ගෙන ඒම වෙනුවට Database එක තුළදීම එකතු කිරීම (Aggregate) වඩාත් කාර්යක්ෂමයි.
+  const revenueStats = await Booking.aggregate([
+    {
+      $group: {
+        _id: null,
+        total: { $sum: "$totalPrice" } // ඔබේ Booking Model එකේ totalPrice field එක තිබිය යුතුය
+      }
+    }
+  ]);
 
-  // 2. Revenue ගන්න (Booking වල totalPrice එක එකතු කරනවා)
-  const bookings = await Booking.find();
-  
-  // 👇 Check 3: Booking Object එකක් Print කරලා බලන්න structure එක හරිද කියලා
-  if (bookings.length > 0) {
-    console.log("Sample Booking:", bookings[0]); 
-  }
+  const totalRevenue = revenueStats.length > 0 ? revenueStats[0].total : 0;
 
-  // totalPrice field එක Booking එකේ තියෙනවද බලන්න. නැත්නම් 0 එන්නේ.
-  const totalRevenue = bookings.reduce((acc, item) => {
-    return acc + (item.totalPrice || item.price || 0); // totalPrice හෝ price තිබුනොත් ගන්නවා
-  }, 0);
-
-  console.log("Total Revenue:", totalRevenue);
+  console.log("Stats Calculated Successfully ✅");
 
   res.json({
     usersCount,

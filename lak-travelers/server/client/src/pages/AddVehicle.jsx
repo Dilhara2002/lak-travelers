@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import API from '../services/api';
+import API from '../services/api'; // API instance එක භාවිතා කරමු
 
 const AddVehicle = () => {
   const navigate = useNavigate();
@@ -22,12 +21,12 @@ const AddVehicle = () => {
   const [uploading, setUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
 
+  // 🔐 Authorization check
   const user = JSON.parse(localStorage.getItem('userInfo'));
 
-  // 🔐 Authorization check
   useEffect(() => {
     if (!user || (user.role !== 'vendor' && user.role !== 'admin')) {
-      alert('Unauthorized Access');
+      alert('Unauthorized Access. Vendors and Admins only.');
       navigate('/');
     }
   }, [user, navigate]);
@@ -37,7 +36,9 @@ const AddVehicle = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // 🖼️ Upload Multiple Images Logic
+  /**
+   * 🖼️ පින්තූර කිහිපයක් එකවර Cloudinary වෙත උඩුගත කිරීම
+   */
   const handleImageUpload = async (files) => {
     if (!files || files.length === 0) return;
 
@@ -53,17 +54,22 @@ const AddVehicle = () => {
       for (const file of files) {
         const data = new FormData();
         data.append('image', file);
-        const config = { headers: { 'Content-Type': 'multipart/form-data' } };
-        const res = await axios.post('http://localhost:5001/api/upload', data, config);
+        
+        // ⚠️ API භාවිතා කිරීමෙන් Localhost/Vercel ප්‍රශ්නය විසඳේ
+        const res = await API.post('/upload', data, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
         uploadedUrls.push(res.data);
       }
+      
       setFormData((prev) => ({
         ...prev,
         images: [...prev.images, ...uploadedUrls],
       }));
+      alert('Images uploaded successfully! ✅');
     } catch (error) {
-      console.error(error);
-      alert('Image upload failed.');
+      console.error('Upload Error:', error);
+      alert(error.response?.data?.message || 'Image upload failed.');
     } finally {
       setUploading(false);
     }
@@ -85,10 +91,18 @@ const AddVehicle = () => {
     }));
   };
 
+  /**
+   * පින්තූර පෙන්වීම සඳහා URL එක සකසන Helper Function එක
+   */
   const getImageUrl = (path) => {
-    return path.startsWith("http") ? path : `http://localhost:5001${path}`;
+    if (path.startsWith("http")) return path;
+    const backendURL = "https://lak-travelers-api.vercel.app"; // ඔබේ Vercel URL එක
+    return `${backendURL}${path.startsWith("/") ? path : `/${path}`}`;
   };
 
+  /**
+   * 🚗 වාහනය Register කිරීම
+   */
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (formData.images.length === 0) return alert('At least one image is required.');
@@ -99,8 +113,8 @@ const AddVehicle = () => {
       alert('Vehicle Registered Successfully! 🚗');
       navigate('/vehicles');
     } catch (error) {
-      console.error(error);
-      alert('Failed to register vehicle.');
+      console.error('Submit Error:', error);
+      alert(error.response?.data?.message || 'Failed to register vehicle.');
     }
   };
 
@@ -108,7 +122,7 @@ const AddVehicle = () => {
     <div className="min-h-screen bg-slate-50 py-12 px-4 sm:px-6 lg:px-8 font-sans">
       <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         
-        {/* Professional Header */}
+        {/* Header */}
         <div className="bg-slate-900 px-8 py-6 flex justify-between items-center">
           <div>
             <h2 className="text-xl font-semibold text-white tracking-wide">Register Vehicle</h2>
@@ -130,7 +144,6 @@ const AddVehicle = () => {
                 <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-6 border-b border-slate-100 pb-2">Vehicle Details</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     
-                    {/* Driver Name */}
                     <div>
                     <label className="block text-sm font-medium text-slate-700 mb-2">Driver Name</label>
                     <div className="relative">
@@ -138,6 +151,7 @@ const AddVehicle = () => {
                         <input
                         type="text"
                         name="driverName"
+                        value={formData.driverName}
                         placeholder="e.g. Sunil Perera"
                         onChange={handleChange}
                         className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none transition-all"
@@ -146,7 +160,6 @@ const AddVehicle = () => {
                     </div>
                     </div>
 
-                    {/* Vehicle Model */}
                     <div>
                     <label className="block text-sm font-medium text-slate-700 mb-2">Vehicle Model</label>
                     <div className="relative">
@@ -154,6 +167,7 @@ const AddVehicle = () => {
                         <input
                         type="text"
                         name="vehicleModel"
+                        value={formData.vehicleModel}
                         placeholder="e.g. Toyota Prius 2018"
                         onChange={handleChange}
                         className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none transition-all"
@@ -162,13 +176,13 @@ const AddVehicle = () => {
                     </div>
                     </div>
 
-                    {/* Vehicle Type */}
                     <div>
                     <label className="block text-sm font-medium text-slate-700 mb-2">Vehicle Type</label>
                     <div className="relative">
                         <span className="absolute left-3 top-3 text-slate-400">🚖</span>
                         <select
                         name="type"
+                        value={formData.type}
                         onChange={handleChange}
                         className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none cursor-pointer"
                         >
@@ -181,7 +195,6 @@ const AddVehicle = () => {
                     </div>
                     </div>
 
-                    {/* License Plate */}
                     <div>
                     <label className="block text-sm font-medium text-slate-700 mb-2">License Plate</label>
                     <div className="relative">
@@ -189,6 +202,7 @@ const AddVehicle = () => {
                         <input
                         type="text"
                         name="licensePlate"
+                        value={formData.licensePlate}
                         placeholder="e.g. CAB-1234"
                         onChange={handleChange}
                         className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none transition-all"
@@ -201,8 +215,6 @@ const AddVehicle = () => {
 
             {/* SECTION 2: PRICING & SPECS */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                
-                {/* Seats */}
                 <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">Seats</label>
                 <div className="relative">
@@ -210,6 +222,7 @@ const AddVehicle = () => {
                     <input
                     type="number"
                     name="capacity"
+                    value={formData.capacity}
                     placeholder="4"
                     onChange={handleChange}
                     className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none transition-all"
@@ -218,7 +231,6 @@ const AddVehicle = () => {
                 </div>
                 </div>
 
-                {/* Price */}
                 <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">Price / Day (LKR)</label>
                 <div className="relative">
@@ -226,6 +238,7 @@ const AddVehicle = () => {
                     <input
                     type="number"
                     name="pricePerDay"
+                    value={formData.pricePerDay}
                     placeholder="5000"
                     onChange={handleChange}
                     className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none transition-all"
@@ -234,7 +247,6 @@ const AddVehicle = () => {
                 </div>
                 </div>
 
-                {/* Contact */}
                 <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">Contact Number</label>
                 <div className="relative">
@@ -242,6 +254,7 @@ const AddVehicle = () => {
                     <input
                     type="text"
                     name="contactNumber"
+                    value={formData.contactNumber}
                     placeholder="077-1234567"
                     onChange={handleChange}
                     className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none transition-all"
@@ -257,6 +270,7 @@ const AddVehicle = () => {
                     <label className="block text-sm font-medium text-slate-700 mb-2">Description</label>
                     <textarea
                     name="description"
+                    value={formData.description}
                     rows="3"
                     placeholder="Any special conditions (e.g. AC, Fuel policy)..."
                     onChange={handleChange}
@@ -267,15 +281,11 @@ const AddVehicle = () => {
 
                 <div className="mb-6">
                     <label className="block text-sm font-medium text-slate-700 mb-2">Map Location URL</label>
-                    <div className="bg-blue-50 border-l-4 border-blue-600 p-4 rounded-r-lg mb-3">
-                        <p className="text-sm text-blue-800">
-                          Paste the <strong>src URL</strong> from the Google Maps embed code.
-                        </p>
-                    </div>
                     <input
                     type="text"
                     name="mapUrl"
-                    placeholder='http://googleusercontent.com/maps...'
+                    value={formData.mapUrl}
+                    placeholder='Paste the src URL from Google Maps embed code'
                     onChange={handleChange}
                     className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none transition-all text-sm font-mono text-slate-600"
                     required
@@ -290,7 +300,6 @@ const AddVehicle = () => {
                     <span className="text-xs font-semibold text-slate-500 bg-slate-100 px-2 py-1 rounded-full">{formData.images.length}/4 Uploaded</span>
                 </div>
 
-                {/* Drop Zone */}
                 {formData.images.length < 4 && (
                 <div
                     onDragOver={onDragOver}
@@ -307,7 +316,6 @@ const AddVehicle = () => {
                 </div>
                 )}
 
-                {/* Previews Grid */}
                 {formData.images.length > 0 && (
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {formData.images.map((img, index) => (
@@ -317,13 +325,11 @@ const AddVehicle = () => {
                             alt={`Vehicle ${index + 1}`} 
                             className="w-full h-full object-cover"
                         />
-                        {/* Delete Overlay */}
                         <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                             <button
                                 type="button"
                                 onClick={() => removeImage(index)}
                                 className="bg-white text-red-600 p-2 rounded-full hover:bg-red-50 transition shadow-lg"
-                                title="Remove Photo"
                             >
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                             </button>
@@ -336,7 +342,7 @@ const AddVehicle = () => {
                 {uploading && (
                     <div className="mt-4 flex items-center justify-center text-indigo-600 text-sm font-medium gap-2">
                         <div className="animate-spin rounded-full h-4 w-4 border-2 border-indigo-600 border-t-transparent"></div>
-                        Uploading images...
+                        Uploading to Cloudinary...
                     </div>
                 )}
             </div>
@@ -354,10 +360,7 @@ const AddVehicle = () => {
                     type="submit"
                     disabled={uploading}
                     className={`px-8 py-3 rounded-lg font-bold text-white shadow-md transition-all
-                    ${uploading 
-                        ? 'bg-slate-400 cursor-not-allowed' 
-                        : 'bg-slate-900 hover:bg-slate-800 hover:shadow-lg active:transform active:scale-95'
-                    }`}
+                    ${uploading ? 'bg-slate-400 cursor-not-allowed' : 'bg-slate-900 hover:bg-slate-800 active:scale-95'}`}
                 >
                     {uploading ? 'Processing...' : 'Complete Registration'}
                 </button>

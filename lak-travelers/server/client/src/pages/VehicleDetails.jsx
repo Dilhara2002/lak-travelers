@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import API from '../services/api';
-import axios from 'axios';
+import API from '../services/api'; // අප සාදාගත් API instance එක
+import logoImage from "../assets/logo.png"; 
 
 const VehicleDetails = () => {
   const { id } = useParams();
@@ -23,20 +23,28 @@ const VehicleDetails = () => {
 
   const user = JSON.parse(localStorage.getItem('userInfo'));
 
+  /**
+   * වාහනයේ විස්තර ලබා ගැනීම
+   */
+  const fetchVehicle = async () => {
+    try {
+      const { data } = await API.get(`/vehicles/${id}`);
+      setVehicle(data);
+      setLoading(false);
+    } catch (error) {
+      console.error("Fetch Error:", error);
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchVehicle = async () => {
-      try {
-        const { data } = await API.get(`/vehicles/${id}`);
-        setVehicle(data);
-        setLoading(false);
-      } catch (error) {
-        console.error(error);
-        setLoading(false);
-      }
-    };
     fetchVehicle();
+    // eslint-disable-next-line
   }, [id]);
 
+  /**
+   * වාහනය වෙන් කිරීම (Booking)
+   */
   const handleBooking = async (e) => {
     e.preventDefault();
     try {
@@ -49,12 +57,15 @@ const VehicleDetails = () => {
       alert("Vehicle Booked Successfully! 🚗✅");
       navigate('/my-bookings');
     } catch (error) {
-      console.error(error);
-      alert("Booking Failed! Please Login.");
-      navigate('/login');
+      console.error("Booking Error:", error);
+      alert(error.response?.data?.message || "Booking Failed! Please Login.");
+      if (error.response?.status === 401) navigate('/login');
     }
   };
 
+  /**
+   * වාහනය මැකීම (Delete)
+   */
   const handleDelete = async () => {
     if (window.confirm("Are you sure you want to delete this vehicle? ⚠️")) {
       try {
@@ -67,23 +78,35 @@ const VehicleDetails = () => {
     }
   };
 
+  /**
+   * Review එක සඳහා පින්තූරයක් Cloudinary වෙත Upload කිරීම
+   */
   const handleReviewImageUpload = async (e) => {
     const file = e.target.files[0];
+    if (!file) return;
+
     const formData = new FormData();
     formData.append('image', file);
     setUploading(true);
+
     try {
-      const config = { headers: { 'Content-Type': 'multipart/form-data' } };
-      const { data } = await axios.post('http://localhost:5001/api/upload', formData, config);
+      // ⚠️ API භාවිතා කිරීමෙන් CORS සහ Authentication දෝෂ මගහැරේ
+      const { data } = await API.post('/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
       setReviewImage(data);
       setUploading(false);
+      alert("Photo uploaded! 📸");
     } catch (error) {
-      console.error(error);
+      console.error("Upload Error:", error);
       setUploading(false);
       alert('Image upload failed');
     }
   };
 
+  /**
+   * Review එක Submit කිරීම
+   */
   const submitReviewHandler = async (e) => {
     e.preventDefault();
     if (rating === 0) return alert("Please select a star rating! ⭐");
@@ -94,23 +117,23 @@ const VehicleDetails = () => {
       setComment('');
       setRating(0);
       setReviewImage('');
-      
-      // Refresh Data
-      const { data } = await API.get(`/vehicles/${id}`);
-      setVehicle(data);
+      fetchVehicle(); // දත්ත අලුත් කරයි
     } catch (error) {
       alert(error.response?.data?.message || "Review Failed");
     }
   };
 
+  /**
+   * පින්තූර URL එක සකසන Helper Function එක
+   */
   const getImageUrl = (imagePath) => {
-    if (!imagePath) return "https://via.placeholder.com/800x400?text=No+Image";
+    if (!imagePath) return "https://via.placeholder.com/800x400?text=No+Image+Available";
     if (imagePath.startsWith("http")) return imagePath;
+    const backendURL = "https://lak-travelers-api.vercel.app"; // ඔබේ Vercel Backend URL එක
     const cleanPath = imagePath.startsWith("/") ? imagePath : `/${imagePath}`;
-    return `http://localhost:5001${cleanPath}`;
+    return `${backendURL}${cleanPath}`;
   };
 
-  // Helper for Rating Labels
   const getRatingLabel = (r) => {
     switch (r) {
       case 5: return "Excellent 😍";
@@ -122,10 +145,9 @@ const VehicleDetails = () => {
     }
   };
 
-  if (loading) return <div className="min-h-screen flex justify-center items-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div></div>;
+  if (loading) return <div className="min-h-screen flex justify-center items-center bg-white"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div></div>;
   if (!vehicle) return <div className="text-center mt-20 text-xl font-bold text-gray-600">Vehicle not found 😕</div>;
 
-  // Use first image for Hero
   const heroImage = vehicle.images && vehicle.images.length > 0 ? vehicle.images[0] : "";
 
   return (
@@ -140,7 +162,7 @@ const VehicleDetails = () => {
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
         
-        <div className="absolute bottom-0 left-0 p-6 md:p-12 text-white max-w-5xl mx-auto w-full">
+        <div className="absolute bottom-0 left-0 p-6 md:p-12 text-white max-w-7xl mx-auto w-full">
            <div className="flex items-center gap-3 mb-2">
               <span className="bg-blue-600 text-xs font-bold px-2 py-1 rounded uppercase tracking-wider">
                 {vehicle.licensePlate}
@@ -149,7 +171,7 @@ const VehicleDetails = () => {
                 👨‍✈️ Driver: {vehicle.driverName}
               </span>
            </div>
-           <h1 className="text-4xl md:text-5xl font-extrabold mb-2 text-shadow-lg">{vehicle.vehicleModel}</h1>
+           <h1 className="text-4xl md:text-5xl font-extrabold mb-2">{vehicle.vehicleModel}</h1>
            <div className="flex items-center gap-4 text-lg">
              <span className="text-yellow-400 font-bold text-xl">⭐ {vehicle.rating ? vehicle.rating.toFixed(1) : "New"}</span>
              <span className="opacity-80">| {vehicle.numReviews} Reviews</span>
@@ -157,17 +179,15 @@ const VehicleDetails = () => {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 md:px-8 -mt-8 relative z-10 grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="container mx-auto px-4 md:px-8 -mt-8 relative z-10 grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-7xl">
         
         {/* 2. MAIN CONTENT (Left) */}
         <div className="lg:col-span-2 space-y-8">
           
-          {/* Specs & Description */}
           <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-bold text-gray-800">Vehicle Details</h2>
-              {/* Admin Actions */}
-              {user && (user.role === 'admin' || user._id === vehicle.user) && (
+              {user && (user.role === 'admin' || user._id === vehicle.user || user._id === vehicle.user?._id) && (
                 <div className="flex gap-3">
                   <button onClick={() => navigate(`/edit-vehicle/${vehicle._id}`)} className="text-blue-600 font-bold hover:underline">Edit</button>
                   <button onClick={handleDelete} className="text-red-500 font-bold hover:underline">Delete</button>
@@ -199,15 +219,14 @@ const VehicleDetails = () => {
                </div>
             </div>
 
-            <p className="text-gray-600 leading-relaxed text-lg">{vehicle.description}</p>
+            <p className="text-gray-600 leading-relaxed text-lg whitespace-pre-line">{vehicle.description}</p>
           </div>
 
-          {/* Map Section */}
           {vehicle.mapUrl && (
              <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
               <h3 className="text-xl font-bold mb-4 text-gray-800">Location 📍</h3>
               <div className="w-full h-80 rounded-xl overflow-hidden bg-gray-100">
-                <iframe src={vehicle.mapUrl} width="100%" height="100%" style={{ border: 0 }} allowFullScreen="" loading="lazy"></iframe>
+                <iframe src={vehicle.mapUrl} width="100%" height="100%" style={{ border: 0 }} allowFullScreen="" title="Vehicle Location"></iframe>
               </div>
             </div>
           )}
@@ -226,43 +245,38 @@ const VehicleDetails = () => {
                </div>
             </div>
 
-            {/* Reviews List */}
             {vehicle.reviews.length === 0 ? (
-               <div className="text-center py-10">
-                 <p className="text-gray-400 italic">No reviews yet.</p>
-               </div>
+               <div className="text-center py-10 italic text-gray-400">No reviews yet.</div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
                 {vehicle.reviews.map((review) => (
                   <div key={review._id} className="flex flex-col gap-3">
                     <div className="flex items-center gap-3">
-                       <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold border border-blue-200">
+                       <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 font-bold border border-blue-100">
                          {review.name.charAt(0).toUpperCase()}
                        </div>
                        <div>
                          <p className="font-bold text-gray-900 leading-tight">{review.name}</p>
                          <div className="flex text-yellow-400 text-xs">
                             {[...Array(5)].map((_, i) => (
-                              <span key={i}>{i < review.rating ? "★" : "☆"}</span>
+                              <span key={i} className="text-sm">{i < review.rating ? "★" : "☆"}</span>
                             ))}
                          </div>
                        </div>
                     </div>
-                    <p className="text-gray-600 text-sm leading-relaxed">{review.comment}</p>
+                    <p className="text-gray-600 text-sm italic">"{review.comment}"</p>
                     {review.image && (
-                      <img src={getImageUrl(review.image)} alt="Review" className="h-16 w-16 object-cover rounded-lg border border-gray-200" />
+                      <img src={getImageUrl(review.image)} alt="Review" className="h-16 w-16 object-cover rounded-lg border border-gray-200 mt-2" />
                     )}
                   </div>
                 ))}
               </div>
             )}
 
-            {/* Write Review Form */}
             <div className="bg-gray-50 p-6 rounded-2xl border border-gray-200">
               <h3 className="text-lg font-bold mb-4">Write a Review ✍️</h3>
               {user ? (
                 <form onSubmit={submitReviewHandler} className="space-y-4">
-                  {/* Star Rating */}
                   <div>
                     <label className="block text-sm font-bold text-gray-700 mb-2">
                       Rating: <span className="text-blue-600 font-normal ml-1">{getRatingLabel(hoverRating || rating)}</span>
@@ -287,7 +301,7 @@ const VehicleDetails = () => {
 
                   <textarea 
                     rows="3" 
-                    className="w-full p-4 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500" 
+                    className="w-full p-4 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 resize-none" 
                     placeholder="How was the driver and vehicle?" 
                     value={comment} 
                     onChange={(e) => setComment(e.target.value)} 
@@ -295,24 +309,25 @@ const VehicleDetails = () => {
                   ></textarea>
 
                   <div className="flex justify-between items-center">
-                    <input type="file" onChange={handleReviewImageUpload} className="text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-white file:text-blue-700 hover:file:bg-blue-50"/>
-                    <button type="submit" disabled={uploading} className="bg-gray-900 text-white px-6 py-2 rounded-lg font-bold hover:bg-gray-800 transition">
-                      {uploading ? 'Wait...' : 'Submit'}
+                    <input type="file" onChange={handleReviewImageUpload} className="text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-blue-600 file:text-white cursor-pointer"/>
+                    <button type="submit" disabled={uploading} className="bg-gray-900 text-white px-8 py-2 rounded-xl font-bold hover:bg-gray-800 transition disabled:opacity-50">
+                      {uploading ? 'Processing...' : 'Submit Review'}
                     </button>
                   </div>
                 </form>
               ) : (
-                <div className="text-sm text-gray-500">Please <a href="/login" className="text-blue-600 font-bold hover:underline">log in</a> to review.</div>
+                <div className="text-sm text-gray-500 p-4 border border-dashed border-gray-300 rounded-xl text-center">
+                  Please <a href="/login" className="text-blue-600 font-bold hover:underline">log in</a> to review.
+                </div>
               )}
             </div>
           </div>
         </div>
 
-        {/* 3. SIDEBAR (Sticky Booking) */}
+        {/* 3. SIDEBAR (Booking) */}
         <div className="lg:col-span-1">
           <div className="bg-white p-6 rounded-2xl shadow-xl border border-gray-100 sticky top-28">
             <div className="mb-6">
-              <span className="text-gray-500 text-sm line-through block">Rs {Math.round(vehicle.pricePerDay * 1.1)}</span>
               <span className="text-3xl font-extrabold text-blue-600">Rs {vehicle.pricePerDay.toLocaleString()}</span>
               <span className="text-gray-500 font-medium"> / day</span>
             </div>
@@ -333,7 +348,7 @@ const VehicleDetails = () => {
                 <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Pickup Location</label>
                 <input 
                   type="text" 
-                  placeholder="e.g. Airport, Colombo Fort..." 
+                  placeholder="e.g. Airport, Colombo..." 
                   className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500" 
                   value={pickupLocation} 
                   onChange={(e) => setPickupLocation(e.target.value)} 
@@ -344,18 +359,15 @@ const VehicleDetails = () => {
               <button type="submit" className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold text-lg hover:shadow-lg hover:bg-blue-700 transition transform active:scale-95">
                 Book Vehicle
               </button>
-              
-              <p className="text-center text-xs text-gray-400 mt-2">Driver fees included in price</p>
+              <p className="text-center text-xs text-gray-400 mt-2">Driver included in price</p>
             </form>
 
             <div className="mt-6 pt-6 border-t border-gray-100 space-y-2 text-xs text-gray-500">
                <div className="flex items-center gap-2"><span className="text-green-500">✔</span> Professional Driver</div>
-               <div className="flex items-center gap-2"><span className="text-green-500">✔</span> Fuel Not Included</div>
                <div className="flex items-center gap-2"><span className="text-green-500">✔</span> 24/7 Roadside Support</div>
             </div>
           </div>
         </div>
-
       </div>
     </div>
   );

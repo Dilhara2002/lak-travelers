@@ -4,33 +4,36 @@ import multer from 'multer';
 
 const router = express.Router();
 
-// 1. පින්තූරය Save වෙන තැන (Vercel Fix)
+// 1. Storage සැකසුම
 const storage = multer.diskStorage({
   destination(req, file, cb) {
-    // 👇 වෙනස: 'uploads/' වෙනුවට '/tmp' භාවිතා කරන්න.
-    // Vercel එකේදී අපිට ලියන්න පුළුවන් '/tmp' ෆෝල්ඩර් එකට විතරයි.
-    cb(null, '/tmp'); 
+    // Vercel හිදී ස්ථිරවම ගොනු ගබඩා කළ නොහැක. 
+    // දේශීයව (Local) වැඩ කරන විට 'uploads/' භාවිතා කරන්න. 
+    // Vercel වලදී පමණක් '/tmp' භාවිතා කරන්න.
+    cb(null, process.env.NODE_ENV === 'production' ? '/tmp' : 'uploads/');
   },
   filename(req, file, cb) {
-    // ෆයිල් එකට අලුත් නමක් දෙනවා
-    cb(null, `${file.fieldname}-${Date.now()}${path.extname(file.originalname)}`);
+    cb(
+      null,
+      `${file.fieldname}-${Date.now()}${path.extname(file.originalname)}`
+    );
   },
 });
 
-// 2. ෆයිල් එක පින්තූරයක්ද කියලා බලන Function එක
+// 2. File Type එක පරීක්ෂා කිරීම
 function checkFileType(file, cb) {
-  const filetypes = /jpg|jpeg|png/;
+  const filetypes = /jpg|jpeg|png|webp/; // webp ද ඇතුළත් කළා
   const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
   const mimetype = filetypes.test(file.mimetype);
 
   if (extname && mimetype) {
     return cb(null, true);
   } else {
-    cb('Images only!');
+    cb(new Error('Images only (jpg, jpeg, png, webp)!'));
   }
 }
 
-// 3. Upload Middleware එක
+// 3. Multer Middleware
 const upload = multer({
   storage,
   fileFilter: function (req, file, cb) {
@@ -38,16 +41,19 @@ const upload = multer({
   },
 });
 
-// 4. Upload Route එක
+// 4. POST Route - තනි පින්තූරයක් Upload කිරීම
 router.post('/', upload.single('image'), (req, res) => {
   if (!req.file) {
-    return res.status(400).send('No file uploaded');
+    res.status(400);
+    throw new Error('No file uploaded');
   }
 
-  // Frontend එකට පින්තූරයේ Path එක ආපහු යවනවා
-  // Vercel එකේදි මෙය තාවකාලික විසඳුමක් පමණි.
-  // හරියටම පින්තූර පෙන්වන්න නම් අපි Cloudinary භාවිතා කළ යුතුයි.
-  res.send(`/uploads/${req.file.filename}`);
+  // Frontend එකට URL එක යැවීම
+  // සටහන: Vercel හිදී ස්ථිර පින්තූර ගබඩාවකට (Cloudinary) මාරු වීම අනිවාර්ය වේ.
+  res.send({
+    message: 'Image uploaded successfully',
+    image: `/${req.file.path}`, 
+  });
 });
 
 export default router;

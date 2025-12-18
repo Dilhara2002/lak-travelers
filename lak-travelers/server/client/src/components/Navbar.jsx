@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import API from "../services/api";
 import logoImage from "../assets/logo.png"; 
@@ -6,20 +6,39 @@ import logoImage from "../assets/logo.png";
 const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const user = JSON.parse(localStorage.getItem("userInfo"));
   
+  // LocalStorage එකෙන් User තොරතුරු ලබා ගැනීම
+  // සටහන: මෙය පසුව Redux හෝ Context API එකකට මාරු කිරීම වඩාත් සුදුසුයි
+  const [user, setUser] = useState(JSON.parse(localStorage.getItem("userInfo")));
+
+  // පිටුව මාරු වන සෑම අවස්ථාවකම User තොරතුරු අලුත් දැයි පරීක්ෂා කරයි
+  useEffect(() => {
+    setUser(JSON.parse(localStorage.getItem("userInfo")));
+  }, [location]);
+
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+  /**
+   * ලොග් අවුට් වීමේ ක්‍රියාවලිය
+   */
   const handleLogout = async () => {
     try {
+      // Backend එකට Logout request එක යවා Cookie එක ඉවත් කරයි
       await API.post("/users/logout");
+      
+      // LocalStorage එකෙන් දත්ත ඉවත් කරයි
+      localStorage.removeItem("userInfo");
+      
+      // තොරතුරු reset කර ලොගින් පිටුවට යවයි
+      setIsDropdownOpen(false);
+      navigate("/login");
+      window.location.reload(); // Auth state එක සම්පූර්ණයෙන්ම clear කිරීමට
     } catch (error) {
       console.error("Logout error:", error);
-    } finally {
+      // Backend එක අවුල් වුවත් local data අනිවාර්යයෙන් අයින් කරයි
       localStorage.removeItem("userInfo");
       navigate("/login");
-      window.location.reload();
     }
   };
 
@@ -32,7 +51,7 @@ const Navbar = () => {
     <nav className="fixed top-0 left-0 right-0 z-50 border-b border-gray-100 bg-white/90 backdrop-blur-md shadow-sm transition-all duration-300">
       <div className="mx-auto flex h-20 max-w-full items-center px-6 sm:px-10 lg:px-16">
         
-        {/* BRAND LOGO - FLUSH LEFT */}
+        {/* BRAND LOGO */}
         <Link to="/" className="flex items-center gap-3 group z-50">
           <div className="h-10 w-10 md:h-12 md:w-12 overflow-hidden rounded-full border border-gray-100 shadow-sm group-hover:shadow-md transition">
             <img 
@@ -53,8 +72,7 @@ const Navbar = () => {
           </div>
         </Link>
 
-        {/* ---------------- 👇 NAV LINKS - PUSHED TO THE RIGHT ---------------- */}
-        {/* ml-auto භාවිතා කර මෙම කොටස දකුණට තල්ලු කර ඇත */}
+        {/* NAVIGATION LINKS */}
         <div className="hidden md:flex items-center space-x-10 ml-auto mr-12">
           {["Home", "Hotels", "Tours", "Vehicles"].map((item) => {
             const path = item === "Home" ? "/" : `/${item.toLowerCase()}`;
@@ -79,7 +97,7 @@ const Navbar = () => {
           })}
         </div>
 
-        {/* ---------------- RIGHT SIDE (Auth/Profile) - FLUSH RIGHT ---------------- */}
+        {/* AUTH SECTION */}
         <div className="flex items-center gap-3">
           {user ? (
             <div className="relative">
@@ -150,6 +168,12 @@ const Navbar = () => {
             {["Home", "Hotels", "Tours", "Vehicles"].map((item) => (
               <Link key={item} to={item === "Home" ? "/" : `/${item.toLowerCase()}`} onClick={closeDropdown} className="text-lg font-bold px-4 py-2 rounded-lg text-gray-600 hover:bg-gray-50">{item}</Link>
             ))}
+            {!user && (
+              <div className="flex flex-col gap-3 pt-4 border-t border-gray-50">
+                <Link to="/login" onClick={closeDropdown} className="text-center py-3 text-gray-600 font-bold">Log In</Link>
+                <Link to="/register" onClick={closeDropdown} className="text-center py-3 bg-blue-600 text-white rounded-xl font-bold">Sign Up</Link>
+              </div>
+            )}
           </div>
         </div>
       )}

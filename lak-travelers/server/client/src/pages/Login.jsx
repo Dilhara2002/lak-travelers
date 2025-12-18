@@ -1,30 +1,38 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import API from "../services/api";
+import API from "../services/api"; // අපි සාදාගත් API service එක
 import logoImage from "../assets/Login.jpg"; 
-{logoImage} 
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [isLoading, setIsLoading] = useState(false); // Loading state added
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
+  /**
+   * Login Form එක Submit කිරීමේදී ක්‍රියාත්මක වන Function එක
+   */
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setIsLoading(true); // Start loading
+    setIsLoading(true);
+    
     try {
+      // ⚠️ මෙහිදී API.post භාවිතා කරන බැවින් Cookies (JWT) ස්වයංක්‍රීයව Browser එකේ Save වේ
       const res = await API.post("/users/auth", { email, password });
       
+      // User තොරතුරු LocalStorage එකේ තැන්පත් කිරීම
       localStorage.setItem("userInfo", JSON.stringify(res.data));
       
-      // Navigate immediately
+      // සාර්ථක වූ පසු Dashboard එකට හෝ Home එකට යොමු කිරීම
       navigate("/");
+      
+      // Navbar එක Update වීමට සහ Auth State එක Refresh වීමට මෙය අවශ්‍යයි
       window.location.reload(); 
     } catch (error) {
-      console.error(error);
-      alert(error.response?.data?.message || "Login Failed");
-      setIsLoading(false); // Stop loading on error
+      console.error("Login Error:", error);
+      // Backend එකෙන් එන දෝෂ පණිවිඩය පෙන්වීම
+      alert(error.response?.data?.message || "Login Failed. Please check your credentials.");
+      setIsLoading(false);
     }
   };
 
@@ -32,7 +40,7 @@ const Login = () => {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
       <div className="bg-white rounded-2xl shadow-xl overflow-hidden max-w-4xl w-full flex flex-col md:flex-row border border-gray-100">
         
-        {/* Left Side: Form */}
+        {/* Left Side: Login Form */}
         <div className="w-full md:w-1/2 p-8 md:p-12 flex flex-col justify-center">
           <div className="mb-8 text-center md:text-left">
             <h2 className="text-3xl font-extrabold text-gray-900">Welcome Back 👋</h2>
@@ -41,7 +49,7 @@ const Login = () => {
           
           <form onSubmit={handleSubmit} className="space-y-6">
             
-            {/* Email Input */}
+            {/* Email Address */}
             <div>
               <label className="block text-sm font-bold text-gray-700 mb-2">Email Address</label>
               <div className="relative">
@@ -62,7 +70,7 @@ const Login = () => {
               </div>
             </div>
 
-            {/* Password Input */}
+            {/* Password */}
             <div>
               <label className="block text-sm font-bold text-gray-700 mb-2">Password</label>
               <div className="relative">
@@ -82,7 +90,7 @@ const Login = () => {
               </div>
             </div>
             
-            {/* Submit Button */}
+            {/* Login Button */}
             <button 
               type="submit" 
               disabled={isLoading}
@@ -107,7 +115,7 @@ const Login = () => {
           </p>
         </div>
 
-        {/* Right Side: Image Overlay */}
+        {/* Right Side: Visual Section */}
         <div className="hidden md:block w-1/2 relative bg-blue-900">
           <img 
             src={logoImage} 
@@ -115,8 +123,8 @@ const Login = () => {
             className="absolute inset-0 w-full h-full object-cover opacity-80"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-blue-900/90 to-transparent flex flex-col justify-end p-12 text-white">
-            <h3 className="text-3xl font-bold mb-2">Explore the Unseen</h3>
-            <p className="text-blue-100">Join thousands of travelers exploring the beauty of Sri Lanka.</p>
+            <h3 className="text-3xl font-bold mb-2 text-shadow-lg">Explore the Unseen</h3>
+            <p className="text-blue-100">Join thousands of travelers exploring the beauty of Sri Lanka with Lak Travelers.</p>
           </div>
         </div>
 

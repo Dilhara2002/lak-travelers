@@ -1,74 +1,62 @@
-import path from 'path';
 import express from 'express';
 import dotenv from 'dotenv';
-import cookieParser from 'cookie-parser';
 import cors from 'cors';
-import { fileURLToPath } from 'url';
-import connectDB from './config/db.js';
-import { notFound, errorHandler } from './middleware/errorMiddleware.js';
+import cookieParser from 'cookie-parser';
+import morgan from 'morgan';
+import helmet from 'helmet';
+import mongoose from 'mongoose';
 
-// Routes Imports
-import userRoutes from './routes/userRoutes.js';
-import hotelRoutes from './routes/hotelRoutes.js';
-import tourRoutes from './routes/tourRoutes.js';
-import vehicleRoutes from './routes/vehicleRoutes.js';
-import bookingRoutes from './routes/bookingRoutes.js';
-import adminRoutes from './routes/adminRoutes.js';
-import uploadRoutes from './routes/uploadRoutes.js';
-
-// 1. Configs & Database
+// Config load
 dotenv.config();
-connectDB();
 
-// 2. App Initialize
 const app = express();
 
-// 3. Middleware Setup (CORS FIXED) 🔒
-app.use(cors({ 
-  origin: [
-    "http://localhost:5173",                 // Local Development
-    "https://lak-travelers-z1uk.vercel.app", // Your Frontend
-    "https://lak-travelers.vercel.app"
-  ],
-  credentials: true, // Cookies (JWT) වැඩ කිරීමට මෙය අනිවාර්යයි
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "Set-Cookie"]
-}));
-
+// 🛠️ Middleware Setup
+app.use(helmet()); 
+app.use(morgan('dev')); 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(cookieParser()); // Cookies කියවීම සඳහා මෙය අත්‍යවශ්‍යයි
+app.use(cookieParser());
 
-// 4. Static Path Setup
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// 🌐 CORS - ඔබගේ .env හි ඇති CLIENT_URL එක භාවිතා කරයි
+app.use(cors({
+  origin: process.env.CLIENT_URL || 'http://localhost:5173',
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+}));
 
-// 5. Image Uploads Folder
-app.use('/uploads', express.static(path.join(__dirname, '/uploads')));
+// 🗄️ MongoDB Connection logic
+const connectDB = async () => {
+  try {
+    const conn = await mongoose.connect(process.env.MONGO_URI);
+    console.log(`MongoDB Atlas Connected: ${conn.connection.host} ✅`);
+  } catch (error) {
+    console.error(`Database Error: ${error.message} ❌`);
+    process.exit(1);
+  }
+};
 
-// 6. API Routes
-app.use('/api/users', userRoutes);
-app.use('/api/hotels', hotelRoutes);
-app.use('/api/tours', tourRoutes);
-app.use('/api/vehicles', vehicleRoutes);
-app.use('/api/bookings', bookingRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/upload', uploadRoutes);
-
-// 7. Root Route
-app.get('/', (req, res) => {
-  res.send('API is running successfully! 🚀');
+// 🛤️ Basic API Test Route
+app.get('/api/health', (req, res) => {
+  res.status(200).json({ status: "API is healthy and running 🚀" });
 });
 
-// 8. Error Handling
-app.use(notFound);
-app.use(errorHandler);
+// 🚨 Error Handling Middleware
+app.use((err, req, res, next) => {
+  const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
+  res.status(statusCode).json({
+    message: err.message,
+    stack: process.env.NODE_ENV === 'production' ? null : err.stack,
+  });
+});
 
-// 9. Server Start
 const PORT = process.env.PORT || 5001;
 
-if (process.env.NODE_ENV !== 'production') {
-    app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-}
+// 🚀 Start Server
+connectDB().then(() => {
+  app.listen(PORT, () => {
+    console.log(`Server started in ${process.env.NODE_ENV} mode on port ${PORT} 🚀`);
+  });
+});
 
 export default app;

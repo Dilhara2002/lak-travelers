@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import API from '../services/api';
 import { useNavigate } from 'react-router-dom';
+import API from '../services/api'; // අපේ API instance එක භාවිතා කරමු
 
 const UserProfile = () => {
   const [name, setName] = useState('');
@@ -13,51 +13,64 @@ const UserProfile = () => {
 
   const navigate = useNavigate();
 
-  // 1. Fetch User Data on Load
+  /**
+   * 1. පිටුව පූරණය වන විට පරිශීලක දත්ත ලබා ගැනීම
+   */
   useEffect(() => {
     const fetchUserData = async () => {
       try {
+        // Backend එකේ /api/users/profile වෙතින් දත්ත ලබා ගනී
         const { data } = await API.get('/users/profile');
         setName(data.name);
         setEmail(data.email);
         setLoading(false);
       } catch (error) {
-        console.error(error);
-        // Redirect to login if session expired
+        console.error("Profile Fetch Error:", error);
+        // ටෝකනය කල් ඉකුත් වී ඇත්නම් Login වෙත යොමු කරයි
+        localStorage.removeItem('userInfo');
         navigate('/login');
       }
     };
     fetchUserData();
   }, [navigate]);
 
-  // 2. Handle Update Logic
+  /**
+   * 2. තොරතුරු යාවත්කාලීන කිරීමේ (Update) Function එක
+   */
   const handleUpdate = async (e) => {
     e.preventDefault();
     setMessage({ text: '', type: '' });
 
+    // Password සැසඳීම
     if (password && password !== confirmPassword) {
       setMessage({ text: "Passwords do not match! ❌", type: 'error' });
       return;
     }
 
     try {
+      // Backend එකට PUT request එක යවයි
       const { data } = await API.put('/users/profile', {
         name,
         password, 
       });
       
-      // Update LocalStorage with new name
-      localStorage.setItem('userInfo', JSON.stringify(data));
+      // LocalStorage එකේ ඇති User තොරතුරු අලුත් නම සමඟ Update කරයි
+      const currentInfo = JSON.parse(localStorage.getItem('userInfo'));
+      localStorage.setItem('userInfo', JSON.stringify({ ...currentInfo, name: data.name }));
       
       setMessage({ text: "Profile Updated Successfully! ✅", type: 'success' });
       setPassword('');
       setConfirmPassword('');
       
-      // Optional: specific timeout before reload or redirect
-      setTimeout(() => window.location.reload(), 1000);
+      // තොරතුරු Refresh වීමට සුළු වෙලාවකට පසු reload කරයි
+      setTimeout(() => window.location.reload(), 1500);
       
     } catch (error) {
-      setMessage({ text: "Update Failed. Please try again.", type: 'error' });
+      console.error("Update Error:", error);
+      setMessage({ 
+        text: error.response?.data?.message || "Update Failed. Please try again.", 
+        type: 'error' 
+      });
     }
   };
 
@@ -68,10 +81,10 @@ const UserProfile = () => {
   );
 
   return (
-    <div className="min-h-screen bg-slate-50 py-12 px-4 sm:px-6 lg:px-8 font-sans">
+    <div className="min-h-screen bg-slate-50 py-12 px-4 sm:px-6 lg:px-8 font-sans mt-12">
       <div className="max-w-2xl mx-auto bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         
-        {/* Professional Header */}
+        {/* Header */}
         <div className="bg-slate-900 px-8 py-6">
           <h2 className="text-xl font-semibold text-white tracking-wide">Account Settings</h2>
           <p className="text-slate-400 text-sm mt-1">Manage your profile information and security.</p>
@@ -81,7 +94,7 @@ const UserProfile = () => {
           
           {/* Notification Banner */}
           {message.text && (
-            <div className={`p-4 rounded-lg text-sm font-medium flex items-center gap-2 ${
+            <div className={`p-4 rounded-lg text-sm font-medium flex items-center gap-2 animate-pulse ${
               message.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'
             }`}>
               <span>{message.type === 'success' ? '✅' : '⚠️'}</span>
@@ -103,6 +116,7 @@ const UserProfile = () => {
                       value={name} 
                       onChange={(e) => setName(e.target.value)} 
                       className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none transition-all text-slate-800"
+                      required
                     />
                 </div>
               </div>
@@ -115,7 +129,7 @@ const UserProfile = () => {
                       type="email" 
                       value={email} 
                       disabled 
-                      className="w-full pl-10 pr-10 py-3 bg-gray-100 border border-slate-200 rounded-lg text-slate-500 cursor-not-allowed select-none"
+                      className="w-full pl-10 pr-10 py-3 bg-gray-100 border border-slate-200 rounded-lg text-slate-500 cursor-not-allowed"
                     />
                     <span className="absolute right-3 top-3 text-slate-400" title="Email cannot be changed">🔒</span>
                 </div>
@@ -139,6 +153,7 @@ const UserProfile = () => {
                       onChange={(e) => setPassword(e.target.value)} 
                       placeholder="Leave blank to keep current password"
                       className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none transition-all placeholder-slate-400"
+                      minLength={6}
                     />
                 </div>
               </div>
