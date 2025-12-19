@@ -1,24 +1,39 @@
 import axios from 'axios';
 
-// Create axios instance
+/**
+ * 🚀 API URL එක ස්වයංක්‍රීයව තීරණය කිරීම
+ * Vercel එකේදී (Production) අදාළ Vercel URL එකත්, 
+ * ඔබේ පරිගණකයේදී (Development) localhost URL එකත් ස්වයංක්‍රීයව තෝරා ගනී.
+ */
+const getBaseURL = () => {
+  // 1. මුලින්ම .env ගොනුවේ VITE_API_URL එකක් තිබේදැයි බලයි
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+  
+  // 2. එසේ නැතිනම් දැනට Browser එකේ ඇති URL එක අනුව තීරණය කරයි
+  // ඔබ ඉන්නේ localhost එකේ නම් 5001 port එකට සම්බන්ධ වේ
+  return window.location.hostname === "localhost" 
+    ? "http://localhost:5001/api" 
+    : "https://lak-travelers-api.vercel.app/api"; // ඔබේ ස්ථිර Vercel Backend URL එක
+};
+
 const API = axios.create({
-  // Vercel deployment එකේදී env එකෙන් URL එක ගනී, නැතිනම් localhost පාවිච්චි කරයි
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5001/api',
+  baseURL: getBaseURL(),
   withCredentials: true, // Cookies (JWT) හුවමාරුවට අනිවාර්යයි
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// ✅ Request Interceptor: සෑම request එකකටම token එක එකතු කිරීමට
+// ✅ Request Interceptor: Token එක Header එකට එක් කිරීම
 API.interceptors.request.use(
   (config) => {
     const userInfo = localStorage.getItem('userInfo');
     if (userInfo) {
       try {
         const parsedUserInfo = JSON.parse(userInfo);
-        // Token එක cookies හරහා යන නිසා headers එකට අවශ්‍ය නැත
-        // නමුත් අවශ්‍ය නම් authorization header එක භාවිතා කළ හැක
+        // Backend එකේ ආරක්ෂාව සඳහා Authorization Header එක අනිවාර්යයෙන් එක් කරයි
         if (parsedUserInfo.token) {
           config.headers.Authorization = `Bearer ${parsedUserInfo.token}`;
         }
@@ -28,36 +43,32 @@ API.interceptors.request.use(
     }
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
-// ✅ Response Interceptor: ලොගින් එක expire වුණොත් handle කිරීමට
+// ✅ Response Interceptor: Error Handling සහ Auto-Logout
 API.interceptors.response.use(
   (response) => response,
   (error) => {
-    console.error('API Error:', error.response?.data || error.message);
+    // 🚨 Browser Console එකේ පෙන්වන දෝෂය පිරිසිදු කරයි
+    const message = error.response?.data?.message || error.message;
+    console.error('API Error Response:', message);
     
+    // 401 (Unauthorized) - Token එක අවලංගු වී ඇත්නම් Login එකට යොමු කරයි
     if (error.response?.status === 401) {
-      // Unauthorized - token expired or invalid
       localStorage.removeItem('userInfo');
-      // Optional: Redirect to login page
       if (window.location.pathname !== '/login') {
         window.location.href = '/login';
       }
     }
     
+    // 403 (Forbidden) - Vendor තවම අනුමත වී නැතිනම්
     if (error.response?.status === 403) {
-      // Forbidden - vendor not approved
-      console.log('Vendor not approved yet');
+      console.warn('Access Forbidden: User/Vendor not authorized');
     }
     
-    // Better error message for user
-    if (error.response?.data?.message) {
-      error.message = error.response.data.message;
-    }
-    
+    // දෝෂ පණිවිඩය UI එකේ පෙන්වීමට හැකි වන සේ සකසයි
+    error.message = message;
     return Promise.reject(error);
   }
 );
