@@ -67,7 +67,7 @@ const Home = () => {
         <div className="relative z-30 max-w-5xl w-full text-center text-white space-y-8 px-6 mt-20">
           <div className="inline-block">
             <span className="uppercase tracking-[0.2em] text-xs md:text-sm font-bold bg-white/10 px-6 py-2 rounded-full backdrop-blur-md border border-white/20 shadow-lg">
-              WELCOME BACK, {user?.name?.toUpperCase()}
+              The Pearl of the Indian Ocean
             </span>
           </div>
           <h1 className="text-5xl sm:text-6xl md:text-8xl font-black tracking-tight drop-shadow-2xl leading-[1.1]">
