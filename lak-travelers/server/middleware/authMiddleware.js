@@ -41,20 +41,20 @@ const protect = asyncHandler(async (req, res, next) => {
 /**
  * @desc    Admin පරිශීලකයින් පමණක් හඳුනාගැනීම
  */
-const admin = (req, res, next) => {
+const admin = asyncHandler(async (req, res, next) => {
   if (req.user && req.user.role === 'admin') {
     next();
   } else {
     res.status(401);
     throw new Error('Not authorized as an admin');
   }
-};
+});
 
 /**
  * @desc    අනුමත වූ (Approved) Vendor කෙනෙක් දැයි පරීක්ෂා කිරීම
  * @info    Vendor කෙනෙකුට වාහන/හෝටල් එකතු කිරීමට මෙය අත්‍යවශ්‍ය වේ.
  */
-const vendor = (req, res, next) => {
+const vendor = asyncHandler(async (req, res, next) => {
   if (req.user && (req.user.role === 'vendor' || req.user.role === 'admin')) {
     // Vendor කෙනෙක් නම් අනිවාර්යයෙන්ම අනුමත වී තිබිය යුතුය
     if (req.user.role === 'vendor' && !req.user.isApproved) {
@@ -66,6 +66,6 @@ const vendor = (req, res, next) => {
     res.status(401);
     throw new Error('Not authorized as a vendor');
   }
-};
+});
 
 export { protect, admin, vendor };

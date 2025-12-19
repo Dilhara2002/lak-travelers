@@ -1,116 +1,109 @@
 import asyncHandler from 'express-async-handler';
 import Booking from '../models/Booking.js';
-import Hotel from '../models/Hotel.js';
-import Tour from '../models/Tour.js';
-import Vehicle from '../models/Vehicle.js';
 
-/**
- * @desc    නව වෙන්කිරීමක් සිදු කිරීම (Create Booking)
- * @route   POST /api/bookings
- * @access  Private
- */
-const createBooking = asyncHandler(async (req, res) => {
-  const { 
-    bookingType, 
-    hotelId, tourId, vehicleId, 
-    checkInDate, checkOutDate, 
-    tourDate, peopleCount, 
-    pickupDate, returnDate, // Vehicle සඳහා returnDate එකතු කළා
-    pickupLocation 
-  } = req.body;
-
-  let totalPrice = 0;
-  let bookingData = {
-    user: req.user._id, // Auth Middleware එකෙන් ලැබෙන ID එක
-    bookingType,
-  };
-
-  // 1. HOTEL BOOKING LOGIC 🏨
-  if (bookingType === 'hotel') {
-    const hotel = await Hotel.findById(hotelId);
-    if (!hotel) { res.status(404); throw new Error('Hotel not found'); }
-
-    const start = new Date(checkInDate);
-    const end = new Date(checkOutDate);
-    const nights = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
-    const validNights = nights > 0 ? nights : 1;
-
-    totalPrice = validNights * hotel.pricePerNight;
-    bookingData = { ...bookingData, hotel: hotelId, checkInDate, checkOutDate, totalPrice };
-  }
-
-  // 2. TOUR BOOKING LOGIC 🚐
-  else if (bookingType === 'tour') {
-    const tour = await Tour.findById(tourId);
-    if (!tour) { res.status(404); throw new Error('Tour not found'); }
-
-    const count = peopleCount || 1;
-    totalPrice = tour.price * count;
-    bookingData = { ...bookingData, tour: tourId, tourDate, peopleCount: count, totalPrice };
-  }
-
-  // 3. VEHICLE BOOKING LOGIC 🚗
-  else if (bookingType === 'vehicle') {
-    const vehicle = await Vehicle.findById(vehicleId);
-    if (!vehicle) { res.status(404); throw new Error('Vehicle not found'); }
-
-    // දින ගණන අනුව මිල ගණනය කිරීම (වැඩිදියුණු කළා)
-    const start = new Date(pickupDate);
-    const end = returnDate ? new Date(returnDate) : new Date(pickupDate);
-    const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) || 1;
-
-    totalPrice = vehicle.pricePerDay * days;
-    bookingData = { ...bookingData, vehicle: vehicleId, pickupDate, returnDate, pickupLocation, totalPrice };
-  }
-
-  const booking = await Booking.create(bookingData);
-  res.status(201).json(booking);
-});
-
-/**
- * @desc    සියලුම වෙන්කිරීම් බැලීම (Admin Only)
- */
-const getBookings = asyncHandler(async (req, res) => {
-    const bookings = await Booking.find()
-      .populate('user', 'name email')
-      .populate('hotel', 'name')
-      .populate('tour', 'name')
-      .populate('vehicle', 'vehicleModel');
-    res.json(bookings);
-});
-
-/**
- * @desc    ලොග් වී සිටින පරිශීලකයාගේ වෙන්කිරීම් බැලීම
- */
-const getMyBookings = asyncHandler(async (req, res) => {
-  // 401 Error එක මගහරවා ගැනීමට req.user._id නිවැරදිව ලැබිය යුතුයි
-  const bookings = await Booking.find({ user: req.user._id })
-    .populate('hotel', 'name image location')
-    .populate('tour', 'name image destinations')
-    .populate('vehicle', 'vehicleModel images type');
-
+// @desc    සියලුම Bookings ලබා ගැනීම (Admin)
+export const getAllBookings = asyncHandler(async (req, res) => {
+  const bookings = await Booking.find({})
+    .populate('user', 'name email')
+    .populate({
+      path: 'hotel tour vehicle',
+      select: 'name vehicleModel user',
+      populate: { path: 'user', select: 'name email' } 
+    });
   res.json(bookings);
 });
 
-/**
- * @desc    වෙන්කිරීමක් අවලංගු කිරීම
- */
-const cancelBooking = asyncHandler(async (req, res) => {
-    const booking = await Booking.findById(req.params.id);
-  
-    if (booking) {
-      // ආරක්ෂක පියවර: අයිතිකරුට හෝ ඇඩ්මින්ට පමණක් අවසරය
-      if(booking.user.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
-          res.status(401);
-          throw new Error('Not authorized to cancel this booking');
-      }
+// @desc    Vendor හට අදාළ Bookings ලබා ගැනීම
+// @desc    Vendor හට අදාළ Bookings ලබා ගැනීම
+export const getMyVendorBookings = asyncHandler(async (req, res) => {
+  // Vendor විසින් අයිති සියලුම හෝටල්, සංචාර සහ වාහන මුලින්ම සොයා ගනී
+  // මෙය වඩාත් ආරක්ෂිත සහ සාර්ථක ක්‍රමයයි
+  const bookings = await Booking.find({})
+    .populate('user', 'name email') // බුක් කළ පුද්ගලයාගේ විස්තර
+    .populate({
+      path: 'hotel',
+      match: { user: req.user._id } // මෙම හෝටලය ලොග් වී සිටින Vendor ට අයිතිදැයි බලයි
+    })
+    .populate({
+      path: 'tour',
+      match: { user: req.user._id }
+    })
+    .populate({
+      path: 'vehicle',
+      match: { user: req.user._id }
+    });
 
-      await booking.deleteOne();
-      res.json({ message: 'Booking removed successfully' });
-    } else {
-      res.status(404);
-      throw new Error('Booking not found');
-    }
+  // Populate කළ පසු match නොවන ඒවා null වේ. 
+  // එබැවින් අවම වශයෙන් එක සේවාවක් හෝ null නොවන Bookings පමණක් පෙරා ගනී.
+  const myBookings = bookings.filter(booking => 
+    booking.hotel !== null || 
+    booking.tour !== null || 
+    booking.vehicle !== null
+  );
+
+  if (myBookings.length === 0) {
+    res.json([]); // දත්ත නැතිනම් හිස් Array එකක් එවයි
+  } else {
+    res.json(myBookings);
+  }
 });
 
-export { createBooking, getBookings, getMyBookings, cancelBooking };
+// @desc    Status Update කිරීම (Accept/Reject)
+export const updateBookingStatus = asyncHandler(async (req, res) => {
+  const { status, problem, solution } = req.body;
+  const booking = await Booking.findById(req.params.id);
+
+  if (booking) {
+    booking.status = status || booking.status;
+    booking.vendorFeedback = {
+      problem: problem || "",
+      solution: solution || ""
+    };
+
+    const updatedBooking = await booking.save();
+    res.json(updatedBooking);
+  } else {
+    res.status(404);
+    throw new Error('Booking not found');
+  }
+});
+
+// @desc    Booking එකක් අවලංගු කිරීම (Cancel)
+export const cancelBooking = asyncHandler(async (req, res) => {
+  const booking = await Booking.findById(req.params.id);
+  if (booking) {
+    booking.status = 'Cancelled';
+    await booking.save();
+    res.json({ message: 'Booking cancelled' });
+  } else {
+    res.status(404);
+    throw new Error('Booking not found');
+  }
+});
+
+// @desc    අලුත් Booking එකක් සෑදීම
+// @route   POST /api/bookings
+// @desc    අලුත් Booking එකක් සෑදීම
+export const createBooking = asyncHandler(async (req, res) => {
+  // 🚨 මෙතැන totalPrice නිවැරදිව ලැබෙනවාදැයි පරීක්ෂා කරන්න
+  const { hotel, tour, vehicle, checkInDate, checkOutDate, totalPrice } = req.body;
+
+  if (!totalPrice) {
+    res.status(400);
+    throw new Error('Total price is required to complete the booking');
+  }
+
+  const booking = new Booking({
+    user: req.user._id,
+    hotel,
+    tour,
+    vehicle,
+    checkInDate,
+    checkOutDate,
+    totalPrice, // 👈 මෙම අගය අනිවාර්යයි
+    status: 'Pending'
+  });
+
+  const createdBooking = await booking.save();
+  res.status(201).json(createdBooking);
+});

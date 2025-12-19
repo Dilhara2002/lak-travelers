@@ -55,7 +55,7 @@ const AddHotel = () => {
       });
       
       // Cloudinary මගින් ලැබෙන URL එක formData එකට එකතු කරයි
-      setFormData((prev) => ({ ...prev, image: res.data }));
+      setFormData((prev) => ({ ...prev, image: res.data.image }));
       alert('Image uploaded successfully! ✅');
     } catch (error) {
       console.error('Upload Error:', error);

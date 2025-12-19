@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import API from '../services/api'; // අප සාදාගත් API instance එක
-import logoImage from "../assets/logo.png"; 
+import API from '../services/api'; 
 
 const VehicleDetails = () => {
   const { id } = useParams();
@@ -13,6 +12,7 @@ const VehicleDetails = () => {
   // Booking State
   const [pickupDate, setPickupDate] = useState("");
   const [pickupLocation, setPickupLocation] = useState("");
+  const [days, setDays] = useState(1); // අවම වශයෙන් එක් දිනක්
 
   // Review State
   const [rating, setRating] = useState(0);
@@ -47,18 +47,27 @@ const VehicleDetails = () => {
    */
   const handleBooking = async (e) => {
     e.preventDefault();
+
+    // 🚨 වැදගත්: මුළු මුදල ගණනය කිරීම
+    const calculatedPrice = vehicle.pricePerDay * days;
+
     try {
-      await API.post('/bookings', {
-        bookingType: 'vehicle',
-        vehicleId: id,
-        pickupDate,
-        pickupLocation
-      });
-      alert("Vehicle Booked Successfully! 🚗✅");
-      navigate('/my-bookings');
+      const bookingData = {
+        vehicle: id,              // Backend Schema එකේ ඇති නම
+        checkInDate: pickupDate,  // Schema එකේ pickupDate සඳහා checkInDate භාවිතා වේ
+        pickupLocation,
+        totalPrice: calculatedPrice, // 👈 මෙම අගය අනිවාර්යයි
+        status: 'Pending'
+      };
+
+      console.log("Submitting Booking:", bookingData); // Debugging
+
+      await API.post('/bookings', bookingData);
+      alert("Vehicle Booked Successfully! 🚗✅. Please wait for Vendor approval.");
+      navigate('/dashboard'); 
     } catch (error) {
       console.error("Booking Error:", error);
-      alert(error.response?.data?.message || "Booking Failed! Please Login.");
+      alert(error.response?.data?.message || "Booking Failed! Please ensure you are logged in.");
       if (error.response?.status === 401) navigate('/login');
     }
   };
@@ -79,7 +88,7 @@ const VehicleDetails = () => {
   };
 
   /**
-   * Review එක සඳහා පින්තූරයක් Cloudinary වෙත Upload කිරීම
+   * Review එක සඳහා පින්තූරයක් Upload කිරීම
    */
   const handleReviewImageUpload = async (e) => {
     const file = e.target.files[0];
@@ -90,11 +99,12 @@ const VehicleDetails = () => {
     setUploading(true);
 
     try {
-      // ⚠️ API භාවිතා කිරීමෙන් CORS සහ Authentication දෝෂ මගහැරේ
       const { data } = await API.post('/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      setReviewImage(data);
+      // ✅ Cloudinary response එකෙන් URL එක පමණක් ලබා ගැනීම
+      const imageUrl = typeof data === 'object' ? data.image : data;
+      setReviewImage(imageUrl);
       setUploading(false);
       alert("Photo uploaded! 📸");
     } catch (error) {
@@ -117,7 +127,7 @@ const VehicleDetails = () => {
       setComment('');
       setRating(0);
       setReviewImage('');
-      fetchVehicle(); // දත්ත අලුත් කරයි
+      fetchVehicle();
     } catch (error) {
       alert(error.response?.data?.message || "Review Failed");
     }
@@ -128,9 +138,9 @@ const VehicleDetails = () => {
    */
   const getImageUrl = (imagePath) => {
     if (!imagePath) return "https://via.placeholder.com/800x400?text=No+Image+Available";
-    if (imagePath.startsWith("http")) return imagePath;
-    const backendURL = "https://lak-travelers-api.vercel.app"; // ඔබේ Vercel Backend URL එක
-    const cleanPath = imagePath.startsWith("/") ? imagePath : `/${imagePath}`;
+    if (typeof imagePath === 'string' && imagePath.startsWith("http")) return imagePath;
+    const backendURL = "https://lak-travelers-api.vercel.app"; 
+    const cleanPath = typeof imagePath === 'string' && imagePath.startsWith("/") ? imagePath : `/${imagePath}`;
     return `${backendURL}${cleanPath}`;
   };
 
@@ -222,15 +232,6 @@ const VehicleDetails = () => {
             <p className="text-gray-600 leading-relaxed text-lg whitespace-pre-line">{vehicle.description}</p>
           </div>
 
-          {vehicle.mapUrl && (
-             <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-              <h3 className="text-xl font-bold mb-4 text-gray-800">Location 📍</h3>
-              <div className="w-full h-80 rounded-xl overflow-hidden bg-gray-100">
-                <iframe src={vehicle.mapUrl} width="100%" height="100%" style={{ border: 0 }} allowFullScreen="" title="Vehicle Location"></iframe>
-              </div>
-            </div>
-          )}
-
           {/* Reviews Section */}
           <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
              <div className="flex items-center gap-4 mb-8 pb-8 border-b border-gray-100">
@@ -288,7 +289,7 @@ const VehicleDetails = () => {
                           type="button"
                           onClick={() => setRating(star)}
                           onMouseEnter={() => setHoverRating(star)}
-                          onMouseLeave={() => setHoverRating(0)}
+                          onMouseLeave={() => setHoverRating(star)}
                           className="focus:outline-none transition-transform hover:scale-110"
                         >
                           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={`w-8 h-8 transition-colors ${star <= (hoverRating || rating) ? 'text-yellow-400' : 'text-gray-300'}`}>
@@ -309,7 +310,7 @@ const VehicleDetails = () => {
                   ></textarea>
 
                   <div className="flex justify-between items-center">
-                    <input type="file" onChange={handleReviewImageUpload} className="text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-blue-600 file:text-white cursor-pointer"/>
+                    <input type="file" onChange={handleReviewImageUpload} className="text-sm text-gray-500 cursor-pointer"/>
                     <button type="submit" disabled={uploading} className="bg-gray-900 text-white px-8 py-2 rounded-xl font-bold hover:bg-gray-800 transition disabled:opacity-50">
                       {uploading ? 'Processing...' : 'Submit Review'}
                     </button>
@@ -345,6 +346,18 @@ const VehicleDetails = () => {
               </div>
 
               <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">How many days?</label>
+                <input 
+                  type="number" 
+                  min="1"
+                  className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500" 
+                  value={days} 
+                  onChange={(e) => setDays(e.target.value)} 
+                  required 
+                />
+              </div>
+
+              <div>
                 <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Pickup Location</label>
                 <input 
                   type="text" 
@@ -354,6 +367,11 @@ const VehicleDetails = () => {
                   onChange={(e) => setPickupLocation(e.target.value)} 
                   required 
                 />
+              </div>
+
+              <div className="flex justify-between items-center py-3 border-t border-gray-100 mt-2">
+                 <span className="font-bold text-gray-700">Total Price:</span>
+                 <span className="font-bold text-xl text-blue-700">LKR {(vehicle.pricePerDay * days).toLocaleString()}</span>
               </div>
 
               <button type="submit" className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold text-lg hover:shadow-lg hover:bg-blue-700 transition transform active:scale-95">

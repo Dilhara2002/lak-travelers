@@ -1,11 +1,44 @@
 import express from 'express';
-import { getTours, createTour, getTourById, deleteTour, updateTour, createTourReview } from '../controllers/tourController.js';
-import { protect } from '../middleware/authMiddleware.js';
+import { protect, vendor } from '../middleware/authMiddleware.js';
+import {
+  getHotels,
+  getHotelById,
+  createHotel,
+  updateHotel,
+  deleteHotel,
+  createHotelReview,
+} from '../controllers/hotelController.js';
 
 const router = express.Router();
 
-router.route('/').get(getTours).post(protect, createTour);
-router.route('/:id').get(getTourById).put(protect, updateTour).delete(protect, deleteTour);
-router.route('/:id/reviews').post(protect, createTourReview);
+/* =====================================================
+   1️⃣ Public Routes (ඕනෑම අයෙකුට බැලිය හැක)
+===================================================== */
+
+// සියලුම හෝටල් ලබා ගැනීම සහ අලුත් හෝටලයක් ඇතුළත් කිරීම
+// (පහත Private routes කොටසේ createHotel වෙනුවට මෙහි post භාවිතා කළ හැක)
+router.route('/')
+  .get(getHotels)
+  .post(protect, vendor, createHotel); 
+
+// ID එක අනුව හෝටලයක් ලබා ගැනීම
+router.route('/:id').get(getHotelById);
+
+/* =====================================================
+   2️⃣ Private Routes (ලොග් වූ පරිශීලකයින්ට පමණි)
+===================================================== */
+
+// 🚀 හෝටල් සමාලෝචන (Reviews) එක් කිරීම
+// ඕනෑම ලොග් වූ පරිශීලකයෙකුට Review එකක් දැමිය හැකි නිසා 'vendor' අවශ්‍ය නැත
+router.route('/:id/reviews').post(protect, createHotelReview);
+
+/* =====================================================
+   3️⃣ Vendor/Admin Routes (වෙන්ඩර් හෝ ඇඩ්මින්ට පමණි)
+===================================================== */
+
+// හෝටල් දත්ත යාවත්කාලීන කිරීම සහ මකා දැමීම
+router.route('/:id')
+  .put(protect, vendor, updateHotel)
+  .delete(protect, vendor, deleteHotel);
 
 export default router;

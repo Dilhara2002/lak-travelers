@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import API from '../services/api'; // API instance එක භාවිතා කරමු
+import API from '../services/api';
 
 const AddVehicle = () => {
   const navigate = useNavigate();
@@ -15,13 +15,11 @@ const AddVehicle = () => {
     description: '',
     contactNumber: '',
     images: [], 
-    mapUrl: '',
   });
 
   const [uploading, setUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
 
-  // 🔐 Authorization check
   const user = JSON.parse(localStorage.getItem('userInfo'));
 
   useEffect(() => {
@@ -36,9 +34,6 @@ const AddVehicle = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  /**
-   * 🖼️ පින්තූර කිහිපයක් එකවර Cloudinary වෙත උඩුගත කිරීම
-   */
   const handleImageUpload = async (files) => {
     if (!files || files.length === 0) return;
 
@@ -55,11 +50,13 @@ const AddVehicle = () => {
         const data = new FormData();
         data.append('image', file);
         
-        // ⚠️ API භාවිතා කිරීමෙන් Localhost/Vercel ප්‍රශ්නය විසඳේ
         const res = await API.post('/upload', data, {
           headers: { 'Content-Type': 'multipart/form-data' }
         });
-        uploadedUrls.push(res.data);
+        
+        // ✅ මෙතැනදී ලැබෙන response එකෙන් URL එක පමණක් ලබාගන්නා බව තහවුරු කරයි
+        const imageUrl = typeof res.data === 'object' ? res.data.image : res.data;
+        uploadedUrls.push(imageUrl);
       }
       
       setFormData((prev) => ({
@@ -91,22 +88,25 @@ const AddVehicle = () => {
     }));
   };
 
-  /**
-   * පින්තූර පෙන්වීම සඳහා URL එක සකසන Helper Function එක
-   */
+  // ✅ ERROR FIX: Path එක String එකක් දැයි පරීක්ෂා කිරීම (Line 90 Fix)
   const getImageUrl = (path) => {
-    if (path.startsWith("http")) return path;
-    const backendURL = "https://lak-travelers-api.vercel.app"; // ඔබේ Vercel URL එක
-    return `${backendURL}${path.startsWith("/") ? path : `/${path}`}`;
+    if (!path) return "";
+    
+    // යම් හෙයකින් path එක Object එකක් ලෙස ලැබුණහොත් එහි URL එක ලබා ගැනීම
+    const finalPath = typeof path === 'object' ? path.image : path;
+
+    // දැන් finalPath අනිවාර්යයෙන්ම String එකක් බැවින් startsWith වැඩ කරයි
+    if (finalPath && typeof finalPath === 'string' && finalPath.startsWith("http")) {
+      return finalPath;
+    }
+    
+    const backendURL = "https://lak-travelers-api.vercel.app"; 
+    return `${backendURL}${finalPath?.startsWith("/") ? finalPath : `/${finalPath}`}`;
   };
 
-  /**
-   * 🚗 වාහනය Register කිරීම
-   */
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (formData.images.length === 0) return alert('At least one image is required.');
-    if (!formData.mapUrl) return alert('Map URL is required.');
 
     try {
       await API.post('/vehicles', formData);
@@ -122,7 +122,6 @@ const AddVehicle = () => {
     <div className="min-h-screen bg-slate-50 py-12 px-4 sm:px-6 lg:px-8 font-sans">
       <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         
-        {/* Header */}
         <div className="bg-slate-900 px-8 py-6 flex justify-between items-center">
           <div>
             <h2 className="text-xl font-semibold text-white tracking-wide">Register Vehicle</h2>
@@ -143,72 +142,71 @@ const AddVehicle = () => {
             <div>
                 <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-6 border-b border-slate-100 pb-2">Vehicle Details</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    
                     <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">Driver Name</label>
-                    <div className="relative">
-                        <span className="absolute left-3 top-3 text-slate-400">👨‍✈️</span>
-                        <input
-                        type="text"
-                        name="driverName"
-                        value={formData.driverName}
-                        placeholder="e.g. Sunil Perera"
-                        onChange={handleChange}
-                        className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none transition-all"
-                        required
-                        />
-                    </div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">Driver Name</label>
+                        <div className="relative">
+                            <span className="absolute left-3 top-3 text-slate-400">👨‍✈️</span>
+                            <input
+                                type="text"
+                                name="driverName"
+                                value={formData.driverName}
+                                placeholder="e.g. Sunil Perera"
+                                onChange={handleChange}
+                                className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none transition-all"
+                                required
+                            />
+                        </div>
                     </div>
 
                     <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">Vehicle Model</label>
-                    <div className="relative">
-                        <span className="absolute left-3 top-3 text-slate-400">🚘</span>
-                        <input
-                        type="text"
-                        name="vehicleModel"
-                        value={formData.vehicleModel}
-                        placeholder="e.g. Toyota Prius 2018"
-                        onChange={handleChange}
-                        className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none transition-all"
-                        required
-                        />
-                    </div>
-                    </div>
-
-                    <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">Vehicle Type</label>
-                    <div className="relative">
-                        <span className="absolute left-3 top-3 text-slate-400">🚖</span>
-                        <select
-                        name="type"
-                        value={formData.type}
-                        onChange={handleChange}
-                        className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none cursor-pointer"
-                        >
-                        <option value="Car">Car 🚗</option>
-                        <option value="Van">Van 🚐</option>
-                        <option value="SUV">SUV 🚙</option>
-                        <option value="Bus">Bus 🚌</option>
-                        <option value="TukTuk">TukTuk 🛺</option>
-                        </select>
-                    </div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">Vehicle Model</label>
+                        <div className="relative">
+                            <span className="absolute left-3 top-3 text-slate-400">🚘</span>
+                            <input
+                                type="text"
+                                name="vehicleModel"
+                                value={formData.vehicleModel}
+                                placeholder="e.g. Toyota Prius 2018"
+                                onChange={handleChange}
+                                className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none transition-all"
+                                required
+                            />
+                        </div>
                     </div>
 
                     <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">License Plate</label>
-                    <div className="relative">
-                        <span className="absolute left-3 top-3 text-slate-400">🔢</span>
-                        <input
-                        type="text"
-                        name="licensePlate"
-                        value={formData.licensePlate}
-                        placeholder="e.g. CAB-1234"
-                        onChange={handleChange}
-                        className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none transition-all"
-                        required
-                        />
+                        <label className="block text-sm font-medium text-slate-700 mb-2">Vehicle Type</label>
+                        <div className="relative">
+                            <span className="absolute left-3 top-3 text-slate-400">🚖</span>
+                            <select
+                                name="type"
+                                value={formData.type}
+                                onChange={handleChange}
+                                className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none cursor-pointer"
+                            >
+                                <option value="Car">Car 🚗</option>
+                                <option value="Van">Van 🚐</option>
+                                <option value="SUV">SUV 🚙</option>
+                                <option value="Bus">Bus 🚌</option>
+                                <option value="TukTuk">TukTuk 🛺</option>
+                            </select>
+                        </div>
                     </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">License Plate</label>
+                        <div className="relative">
+                            <span className="absolute left-3 top-3 text-slate-400">🔢</span>
+                            <input
+                                type="text"
+                                name="licensePlate"
+                                value={formData.licensePlate}
+                                placeholder="e.g. CAB-1234"
+                                onChange={handleChange}
+                                className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none transition-all"
+                                required
+                            />
+                        </div>
                     </div>
                 </div>
             </div>
@@ -216,79 +214,66 @@ const AddVehicle = () => {
             {/* SECTION 2: PRICING & SPECS */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Seats</label>
-                <div className="relative">
-                    <span className="absolute left-3 top-3 text-slate-400">💺</span>
-                    <input
-                    type="number"
-                    name="capacity"
-                    value={formData.capacity}
-                    placeholder="4"
-                    onChange={handleChange}
-                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none transition-all"
-                    required
-                    />
-                </div>
-                </div>
-
-                <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Price / Day (LKR)</label>
-                <div className="relative">
-                    <span className="absolute left-3 top-3 text-slate-400 font-bold text-xs">Rs</span>
-                    <input
-                    type="number"
-                    name="pricePerDay"
-                    value={formData.pricePerDay}
-                    placeholder="5000"
-                    onChange={handleChange}
-                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none transition-all"
-                    required
-                    />
-                </div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Seats</label>
+                    <div className="relative">
+                        <span className="absolute left-3 top-3 text-slate-400">💺</span>
+                        <input
+                            type="number"
+                            name="capacity"
+                            value={formData.capacity}
+                            placeholder="4"
+                            onChange={handleChange}
+                            className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none transition-all"
+                            required
+                        />
+                    </div>
                 </div>
 
                 <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Contact Number</label>
-                <div className="relative">
-                    <span className="absolute left-3 top-3 text-slate-400">📞</span>
-                    <input
-                    type="text"
-                    name="contactNumber"
-                    value={formData.contactNumber}
-                    placeholder="077-1234567"
-                    onChange={handleChange}
-                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none transition-all"
-                    required
-                    />
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Price / Day (LKR)</label>
+                    <div className="relative">
+                        <span className="absolute left-3 top-3 text-slate-400 font-bold text-xs">Rs</span>
+                        <input
+                            type="number"
+                            name="pricePerDay"
+                            value={formData.pricePerDay}
+                            placeholder="5000"
+                            onChange={handleChange}
+                            className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none transition-all"
+                            required
+                        />
+                    </div>
                 </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Contact Number</label>
+                    <div className="relative">
+                        <span className="absolute left-3 top-3 text-slate-400">📞</span>
+                        <input
+                            type="text"
+                            name="contactNumber"
+                            value={formData.contactNumber}
+                            placeholder="077-1234567"
+                            onChange={handleChange}
+                            className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none transition-all"
+                            required
+                        />
+                    </div>
                 </div>
             </div>
 
-            {/* SECTION 3: DESCRIPTION & MAP */}
+            {/* SECTION 3: DESCRIPTION */}
             <div>
                 <div className="mb-6">
                     <label className="block text-sm font-medium text-slate-700 mb-2">Description</label>
                     <textarea
-                    name="description"
-                    value={formData.description}
-                    rows="3"
-                    placeholder="Any special conditions (e.g. AC, Fuel policy)..."
-                    onChange={handleChange}
-                    className="w-full p-4 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none transition-all resize-none"
-                    required
-                    />
-                </div>
-
-                <div className="mb-6">
-                    <label className="block text-sm font-medium text-slate-700 mb-2">Map Location URL</label>
-                    <input
-                    type="text"
-                    name="mapUrl"
-                    value={formData.mapUrl}
-                    placeholder='Paste the src URL from Google Maps embed code'
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none transition-all text-sm font-mono text-slate-600"
-                    required
+                        name="description"
+                        value={formData.description}
+                        rows="3"
+                        placeholder="Any special conditions (e.g. AC, Fuel policy)..."
+                        onChange={handleChange}
+                        className="w-full p-4 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none transition-all resize-none"
+                        required
                     />
                 </div>
             </div>

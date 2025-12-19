@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import API from '../services/api'; // අපි සාදාගත් API instance එක භාවිතා කරමු
+import API from '../services/api'; 
 
 const TourDetails = () => {
   const { id } = useParams();
@@ -60,18 +60,28 @@ const TourDetails = () => {
    */
   const handleBooking = async (e) => {
     e.preventDefault();
+    
+    // 🚨 පද්ධතියේ වැදගත්ම කොටස: මුළු මුදල ගණනය කිරීම
+    const calculatedTotalPrice = tour.price * peopleCount;
+
     try {
-      await API.post('/bookings', {
-        bookingType: 'tour',
-        tourId: id,
-        tourDate,
-        peopleCount
-      });
-      alert("Tour Booked Successfully! 🚐🎉");
-      navigate('/my-bookings');
+      const bookingData = {
+        tour: id, // Backend එක බලාපොරොත්තු වන නම
+        checkInDate: tourDate, // Tour date එක checkInDate ලෙස යවමු (Schema එකට අනුව)
+        peopleCount: Number(peopleCount),
+        totalPrice: calculatedTotalPrice, // 👈 මීට පෙර අඩුව තිබූ පේළිය මෙයයි
+        status: 'Pending'
+      };
+
+      console.log("Submitting Booking:", bookingData); // Debugging
+
+      await API.post('/bookings', bookingData);
+      
+      alert("Tour Booked Successfully! 🚐🎉. Please wait for Vendor approval.");
+      navigate('/dashboard'); // හෝ /my-bookings වෙත යොමු කරන්න
     } catch (error) {
       console.error("Booking Error:", error);
-      alert(error.response?.data?.message || "Booking Failed! Please Login.");
+      alert(error.response?.data?.message || "Booking Failed! Please ensure you are logged in.");
       if (error.response?.status === 401) navigate('/login');
     }
   };
@@ -88,11 +98,12 @@ const TourDetails = () => {
     setUploading(true);
 
     try {
-      // ⚠️ API භාවිතා කිරීමෙන් CORS සහ 401 දෝෂ මගහැරේ
       const { data } = await API.post('/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      setReviewImage(data);
+      // 🚨 Fix: Cloudinary response එකෙන් image URL එක පමණක් ලබාගන්න
+      const imageUrl = typeof data === 'object' ? data.image : data;
+      setReviewImage(imageUrl);
       setUploading(false);
       alert("Review photo uploaded! 📸");
     } catch (error) {
@@ -115,7 +126,7 @@ const TourDetails = () => {
       setComment('');
       setRating(0);
       setReviewImage('');
-      fetchTour(); // Refresh data
+      fetchTour(); 
     } catch (error) {
       alert(error.response?.data?.message || "Review Failed");
     }
@@ -126,9 +137,9 @@ const TourDetails = () => {
    */
   const getImageUrl = (imagePath) => {
     if (!imagePath) return "https://via.placeholder.com/800x400?text=No+Image+Found";
-    if (imagePath.startsWith("http")) return imagePath;
-    const backendURL = "https://lak-travelers-api.vercel.app"; // ඔබේ Vercel Backend URL එක
-    const cleanPath = imagePath.startsWith("/") ? imagePath : `/${imagePath}`;
+    if (typeof imagePath === 'string' && imagePath.startsWith("http")) return imagePath;
+    const backendURL = "https://lak-travelers-api.vercel.app"; 
+    const cleanPath = typeof imagePath === 'string' && imagePath.startsWith("/") ? imagePath : `/${imagePath}`;
     return `${backendURL}${cleanPath}`;
   };
 
@@ -180,7 +191,6 @@ const TourDetails = () => {
         {/* 2. MAIN CONTENT (Left) */}
         <div className="lg:col-span-2 space-y-8">
           
-          {/* Overview */}
           <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-bold text-gray-800">Tour Overview</h2>
@@ -194,7 +204,6 @@ const TourDetails = () => {
             <p className="text-gray-600 leading-relaxed text-lg whitespace-pre-line">{tour.description}</p>
           </div>
 
-          {/* Map */}
           {tour.mapUrl && (
              <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
               <h3 className="text-xl font-bold mb-4 text-gray-800">Route Map 🗺️</h3>
@@ -204,7 +213,6 @@ const TourDetails = () => {
             </div>
           )}
 
-          {/* Reviews Section */}
           <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
              <div className="flex items-center gap-4 mb-8 pb-8 border-b border-gray-100">
                <div className="text-center">
@@ -218,7 +226,6 @@ const TourDetails = () => {
                </div>
             </div>
 
-            {/* Reviews List */}
             {tour.reviews.length === 0 ? (
                <div className="text-center py-10 italic text-gray-400">No reviews yet.</div>
             ) : (
@@ -247,7 +254,6 @@ const TourDetails = () => {
               </div>
             )}
 
-            {/* Write Review Form */}
             <div className="bg-gray-50 p-6 rounded-2xl border border-gray-200">
               <h3 className="text-lg font-bold mb-4">Write a Review ✍️</h3>
               {user ? (
@@ -284,7 +290,7 @@ const TourDetails = () => {
                   ></textarea>
 
                   <div className="flex justify-between items-center">
-                    <input type="file" onChange={handleReviewImageUpload} className="text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-green-600 file:text-white cursor-pointer"/>
+                    <input type="file" onChange={handleReviewImageUpload} className="text-sm text-gray-500 cursor-pointer"/>
                     <button type="submit" disabled={uploading} className="bg-gray-900 text-white px-8 py-2 rounded-xl font-bold hover:bg-gray-800 transition disabled:opacity-50">
                       {uploading ? 'Processing...' : 'Submit Review'}
                     </button>

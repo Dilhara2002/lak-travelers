@@ -31,53 +31,45 @@ const Dashboard = () => {
     myHotels: 0,
     myTours: 0,
     myVehicles: 0,
+    myBookingsCount: 0, // අලුතින් එක් කළා
   });
 
-  /* ---------------- AUTH GUARD & DATA FETCH ---------------- */
-  useEffect(() => {
-    if (!user) {
-      navigate("/login");
-      return;
-    }
-    fetchDashboardData();
-    // eslint-disable-next-line
-  }, [user]);
-
-  /* ---------------- FETCH DATA ---------------- */
+  /* ---------------- FETCH DASHBOARD DATA ---------------- */
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
 
-      // Admin තොරතුරු ලබා ගැනීම
       if (user.role === "admin") {
         const [statsRes, pendingRes] = await Promise.all([
-          API.get("/admin/stats"),
+          API.get("/users/admin-stats"), 
           API.get("/users/pending"),
         ]);
         setAdminStats(statsRes.data);
         setPendingVendors(pendingRes.data);
       }
 
-      // Vendor තොරතුරු ලබා ගැනීම
       if (user.role === "vendor") {
-        const [hotels, tours, vehicles] = await Promise.all([
-          API.get("/hotels"),
-          API.get("/tours"),
-          API.get("/vehicles"),
-        ]);
+        try {
+          const [hotels, tours, vehicles, bookings] = await Promise.all([
+            API.get("/hotels").catch(() => ({ data: [] })),
+            API.get("/tours").catch(() => ({ data: [] })),
+            API.get("/vehicles").catch(() => ({ data: [] })),
+            API.get("/bookings/vendor/my").catch(() => ({ data: [] })), // Vendor Bookings ලබා ගැනීම
+          ]);
 
-        const uid = user._id;
-        
-        // Vendor හට අදාළ දත්ත පමණක් පෙරීම (Filter)
-        setVendorStats({
-          myHotels: hotels.data.filter(h => h.user === uid || h.user?._id === uid).length,
-          myTours: tours.data.filter(t => t.user === uid || t.user?._id === uid).length,
-          myVehicles: vehicles.data.filter(v => v.user === uid || v.user?._id === uid).length,
-        });
+          const uid = user._id;
+          setVendorStats({
+            myHotels: hotels.data.filter(h => h.user === uid || h.user?._id === uid).length,
+            myTours: tours.data.filter(t => t.user === uid || t.user?._id === uid).length,
+            myVehicles: vehicles.data.filter(v => v.user === uid || v.user?._id === uid).length,
+            myBookingsCount: bookings.data.length,
+          });
+        } catch (err) {
+          console.error("Vendor Dashboard Fetch Error:", err);
+        }
       }
     } catch (err) {
       console.error("Dashboard Fetch Error:", err);
-      // ටෝකනය කල් ඉකුත් වී ඇත්නම් නැවත ලොග් වීමට යොමු කරයි
       if (err.response?.status === 401) {
         localStorage.removeItem("userInfo");
         navigate("/login");
@@ -86,6 +78,16 @@ const Dashboard = () => {
       setLoading(false);
     }
   };
+
+  /* ---------------- AUTH GUARD ---------------- */
+  useEffect(() => {
+    if (!user) {
+      navigate("/login");
+      return;
+    }
+    fetchDashboardData();
+    // eslint-disable-next-line
+  }, [user]);
 
   /* ---------------- APPROVE VENDOR ---------------- */
   const approveVendor = async (id) => {
@@ -99,7 +101,6 @@ const Dashboard = () => {
     }
   };
 
-  /* ---------------- LOADING UI ---------------- */
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50">
@@ -109,7 +110,6 @@ const Dashboard = () => {
     );
   }
 
-  /* ---------------- REUSABLE CARD ---------------- */
   const StatCard = ({ title, value }) => (
     <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition">
       <p className="text-xs text-gray-400 font-bold uppercase tracking-wider">{title}</p>
@@ -142,6 +142,17 @@ const Dashboard = () => {
             <StatCard title="Total Revenue" value={`Rs. ${adminStats.totalRevenue.toLocaleString()}`} />
           </div>
 
+          {/* 🚀 ADMIN BOOKING MANAGEMENT SECTION */}
+          <div className="mb-10">
+            <Link to="/admin/bookings" className="flex items-center justify-between bg-slate-900 text-white p-6 rounded-2xl shadow-lg hover:bg-slate-800 transition group">
+              <div>
+                <h2 className="text-xl font-bold">Manage All Bookings 📑</h2>
+                <p className="text-slate-400 text-sm mt-1">Review customer bookings, vendor details, and status.</p>
+              </div>
+              <span className="text-3xl group-hover:translate-x-2 transition-transform">→</span>
+            </Link>
+          </div>
+
           <div className="grid lg:grid-cols-2 gap-8 mb-12">
             <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
               <h3 className="font-bold mb-6 text-gray-700">Services Distribution</h3>
@@ -150,7 +161,7 @@ const Dashboard = () => {
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} />
                   <YAxis axisLine={false} tickLine={false} />
-                  <Tooltip cursor={{fill: '#f8fafc'}} />
+                  <Tooltip cursor={{ fill: '#f8fafc' }} />
                   <Bar dataKey="count" fill="#3b82f6" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
@@ -222,10 +233,22 @@ const Dashboard = () => {
             <div className="text-sm bg-green-50 text-green-700 px-4 py-2 rounded-full font-bold">Vendor Panel</div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
             <StatCard title="My Hotels" value={vendorStats.myHotels} />
             <StatCard title="My Tours" value={vendorStats.myTours} />
             <StatCard title="My Vehicles" value={vendorStats.myVehicles} />
+            <StatCard title="New Bookings" value={vendorStats.myBookingsCount} />
+          </div>
+
+          {/* 🚀 VENDOR BOOKING MANAGEMENT SECTION */}
+          <div className="mb-10">
+            <Link to="/vendor/bookings" className="flex items-center justify-between bg-indigo-600 text-white p-6 rounded-2xl shadow-lg hover:bg-indigo-700 transition group">
+              <div>
+                <h2 className="text-xl font-bold">Manage My Bookings 🚗</h2>
+                <p className="text-indigo-100 text-sm mt-1">Accept or reject customer orders and provide feedback.</p>
+              </div>
+              <span className="text-3xl group-hover:translate-x-2 transition-transform">→</span>
+            </Link>
           </div>
 
           <div className="bg-white p-8 rounded-xl border border-gray-100 shadow-sm">
@@ -235,7 +258,7 @@ const Dashboard = () => {
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} />
                 <YAxis axisLine={false} tickLine={false} />
-                <Tooltip cursor={{fill: '#f8fafc'}} />
+                <Tooltip cursor={{ fill: '#f8fafc' }} />
                 <Bar dataKey="count" fill="#10b981" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -245,9 +268,6 @@ const Dashboard = () => {
     );
   }
 
-  /* ============================================================
-     👤 NORMAL USER
-  ============================================================ */
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
       <div className="bg-white p-12 rounded-2xl shadow-xl border border-gray-100 text-center max-w-lg w-full">

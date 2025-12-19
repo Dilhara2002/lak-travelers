@@ -1,24 +1,24 @@
 import express from 'express';
-import { protect, admin } from '../middleware/authMiddleware.js';
+import { protect, admin, vendor } from '../middleware/authMiddleware.js';
 import { 
-  createBooking, 
-  getBookings, 
-  getMyBookings, 
-  cancelBooking 
+  createBooking,
+  getAllBookings, 
+  getMyVendorBookings, 
+  updateBookingStatus,
+  cancelBooking // 👈 දැන් මෙය ක්‍රියා කරයි
 } from '../controllers/bookingController.js';
 
 const router = express.Router();
 
-// 1. අලුත් Booking එකක් දැමීම (ලොග් වූ ඕනෑම අයෙකුට)
-router.post('/', protect, createBooking);
+// Admin Route
+router.get('/admin/all', protect, admin, getAllBookings);
 
-// 2. තමන්ගේම Bookings බැලීම (ලොග් වූ පරිශීලකයාට පමණි)
-router.get('/mybookings', protect, getMyBookings);
+// Vendor Route
+router.get('/vendor/my', protect, vendor, getMyVendorBookings);
+router.route('/').post(protect, createBooking);
 
-// 3. සියලුම Bookings බැලීම (Admin හට පමණි)
-router.get('/', protect, admin, getBookings);
-
-// 4. Booking එකක් අවලංගු කිරීම
-router.delete('/:id', protect, cancelBooking);
+// Common/User Routes
+router.put('/:id/status', protect, updateBookingStatus);
+router.put('/:id/cancel', protect, cancelBooking);
 
 export default router;

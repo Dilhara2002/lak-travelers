@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 
 // 👇 Local images import කිරීම
@@ -13,10 +13,10 @@ import i8 from "../assets/i8.jpg";
 
 const Home = () => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const heroImages = [i1, i2, i3, i4, i5, i6, i7];
+  
+  const heroImages = useMemo(() => [i1, i2, i3, i4, i5, i6, i7], []);
 
-  // 1. පරිශීලකයා ලොග් වී ඇත්දැයි ආරක්ෂිතව පරීක්ෂා කිරීම
-  const [user, setUser] = useState(() => {
+  const [user] = useState(() => {
     const savedUser = localStorage.getItem("userInfo");
     return savedUser ? JSON.parse(savedUser) : null;
   });
@@ -27,31 +27,44 @@ const Home = () => {
       setCurrentImageIndex((prevIndex) =>
         prevIndex === heroImages.length - 1 ? 0 : prevIndex + 1
       );
-    }, 8000);
+    }, 7000); // සෑම තත්පර 7කට වරක් පින්තූරය මාරු වේ
     return () => clearInterval(intervalId);
   }, [heroImages.length]);
 
   // ============================================================
-  // 👇 ලියාපදිංචි වූ පරිශීලකයින් සඳහා පෙන්වන කොටස (LOGIN USER UI)
+  // 👇 පොදු පින්තූර Slider එක (Very Slow Cross-fade & Zoom Effect)
+  // ============================================================
+  const BackgroundSlider = () => (
+    <div className="absolute inset-0 z-0 overflow-hidden">
+      {heroImages.map((imgUrl, index) => (
+        <img
+          key={index}
+          src={imgUrl}
+          alt="Sri Lanka Paradise"
+          className={`absolute inset-0 w-full h-full object-cover transition-all duration-[4000ms] ease-in-out transform ${
+            index === currentImageIndex 
+              ? 'opacity-100 scale-110' // Active පින්තූරය සෙමින් Zoom වේ
+              : 'opacity-0 scale-100'   // අනෙක් පින්තූර මැකී යයි
+          }`}
+        />
+      ))}
+      {/* අකුරු පැහැදිලිව පෙනීමට අඳුරු Overlay එකක් */}
+      <div className="absolute inset-0 bg-black/40 z-10"></div>
+      <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-slate-50 z-20"></div>
+    </div>
+  );
+
+  // ============================================================
+  // 👇 ලියාපදිංචි වූ පරිශීලකයින් සඳහා පෙන්වන කොටස
   // ============================================================
   const LoggedInUI = () => (
     <div className="bg-slate-50 min-h-screen font-sans text-slate-800 mt-[-20px]">
       <div className="relative h-[650px] lg:h-[800px] flex items-center justify-center overflow-hidden">
-        <div className="absolute inset-0">
-          {heroImages.map((imgUrl, index) => (
-            <img
-              key={index}
-              src={imgUrl}
-              alt="Sri Lanka Paradise"
-              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-[2000ms] ease-in-out ${
-                index === currentImageIndex ? 'opacity-100 scale-105' : 'opacity-0 scale-100'
-              }`}
-            />
-          ))}
-          <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/20 to-slate-50"></div>
-        </div>
+        
+        <BackgroundSlider />
 
-        <div className="relative z-20 max-w-5xl w-full text-center text-white space-y-8 animate-fade-in-up px-6 mt-20">
+        {/* ස්ථාවර Text (No Re-animation) */}
+        <div className="relative z-30 max-w-5xl w-full text-center text-white space-y-8 px-6 mt-20">
           <div className="inline-block">
             <span className="uppercase tracking-[0.2em] text-xs md:text-sm font-bold bg-white/10 px-6 py-2 rounded-full backdrop-blur-md border border-white/20 shadow-lg">
               WELCOME BACK, {user?.name?.toUpperCase()}
@@ -99,18 +112,15 @@ const Home = () => {
   );
 
   // ============================================================
-  // 👇 ලියාපදිංචි නොවූ අමුත්තන් සඳහා පෙන්වන කොටස (GUEST USER UI)
+  // 👇 ලියාපදිංචි නොවූ අමුත්තන් සඳහා පෙන්වන කොටස
   // ============================================================
   const GuestUI = () => (
     <div className="bg-slate-50 min-h-screen font-sans text-slate-800 mt-[-96px]">
       <div className="relative h-[650px] lg:h-[850px] flex items-center justify-center px-4 overflow-hidden">
-        <div className="absolute inset-0">
-          {heroImages.map((imgUrl, index) => (
-            <img key={index} src={imgUrl} alt="Discover SL" className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-[2000ms] ease-in-out ${index === currentImageIndex ? 'opacity-100 scale-105' : 'opacity-0 scale-100'}`} />
-          ))}
-          <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/30 to-slate-50"></div>
-        </div>
-        <div className="relative z-20 max-w-5xl w-full text-center text-white space-y-8 animate-fade-in-up px-6 mt-20">
+        
+        <BackgroundSlider />
+
+        <div className="relative z-30 max-w-5xl w-full text-center text-white space-y-8 px-6 mt-20">
           <div className="inline-block"><span className="uppercase tracking-[0.2em] text-xs md:text-sm font-bold bg-white/10 px-6 py-2 rounded-full backdrop-blur-md border border-white/20">The Pearl of the Indian Ocean </span></div>
           <h1 className="text-5xl sm:text-6xl md:text-8xl font-black tracking-tight leading-[1.1]">Explore <br/><span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-orange-400 to-yellow-500">Lak Travelers</span></h1>
           <p className="text-lg md:text-2xl text-slate-100 max-w-2xl mx-auto font-light leading-relaxed">The all-in-one platform for luxury hotels, expert tour guides, and reliable vehicle rentals across Sri Lanka.</p>

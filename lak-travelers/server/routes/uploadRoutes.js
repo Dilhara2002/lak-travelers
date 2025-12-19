@@ -45,6 +45,14 @@ router.post('/', upload.single('image'), (req, res) => {
     });
   } catch (error) {
     console.error('Upload Error:', error);
+    
+    // File size error එක විශේෂයෙන් handle කරන්න
+    if (error.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({ 
+        message: 'File too large. Maximum size is 5MB' 
+      });
+    }
+    
     res.status(500).json({ message: 'Upload failed', error: error.message });
   }
 });

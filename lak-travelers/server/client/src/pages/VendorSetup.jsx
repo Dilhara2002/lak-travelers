@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import API from "../services/api"; // අපගේ සාදාගත් API instance එක
+import API from "../services/api"; 
 
 const VendorSetup = () => {
   const navigate = useNavigate();
@@ -8,6 +8,8 @@ const VendorSetup = () => {
     const savedUser = localStorage.getItem("userInfo");
     return savedUser ? JSON.parse(savedUser) : null;
   });
+
+  
 
   // Form Data State
   const [formData, setFormData] = useState({
@@ -38,10 +40,13 @@ const VendorSetup = () => {
 
   // 🔐 Authorization Guard
   useEffect(() => {
-    if (!user) navigate("/login");
-    else if (user.role !== "vendor") navigate("/");
-    else if (user.isApproved) navigate("/dashboard");
-    else if (user.vendorDetails?.businessName) setIsPending(true);
+    if (!user) {
+      navigate("/login");
+    } else if (user.role === "vendor" && user.isApproved) {
+      navigate("/dashboard");
+    } else if (user.vendorDetails?.businessName) {
+      setIsPending(true);
+    }
   }, [user, navigate]);
 
   const handleChange = (e) => {
@@ -54,7 +59,6 @@ const VendorSetup = () => {
   const handleFileUpload = async (file, fieldName) => {
     if (!file) return;
 
-    // Field එකට අදාළව Loading පෙන්වීම
     const stateKey = fieldName === 'profileImage' ? 'profile' : fieldName;
     setUploadingState(prev => ({ ...prev, [stateKey]: true }));
 
@@ -62,14 +66,21 @@ const VendorSetup = () => {
     data.append('image', file);
 
     try {
-      // ⚠️ API භාවිතා කිරීමෙන් CORS සහ Cookies ප්‍රශ්නය විසඳේ
       const res = await API.post('/upload', data, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      setFormData(prev => ({ ...prev, [fieldName]: res.data }));
+
+      // ✅ නිවැරදි කිරීම: Backend එකෙන් image path එක ලබාගැනීම
+      const imagePath = res.data?.image || res.data;
+      
+      if (!imagePath) {
+        throw new Error('No image path returned from server');
+      }
+      
+      setFormData(prev => ({ ...prev, [fieldName]: imagePath }));
     } catch (error) {
       console.error("Upload Error:", error);
-      alert("Document upload failed. Please try again.");
+      alert(`Document upload failed: ${error.message}`);
     } finally {
       setUploadingState(prev => ({ ...prev, [stateKey]: false }));
     }
@@ -82,33 +93,51 @@ const VendorSetup = () => {
     e.preventDefault();
     
     // Validation
-    if (!formData.profileImage) return alert("Profile Image is required!");
-    if (!formData.idFront) return alert("Identity Document (Front) is required!");
-    if (docType !== 'passport' && !formData.idBack) return alert("Identity Document (Back) is required!");
+    if (!formData.profileImage) {
+      alert("Profile Image is required!");
+      return;
+    }
+    if (!formData.idFront) {
+      alert("Identity Document (Front) is required!");
+      return;
+    }
+    if (docType !== 'passport' && !formData.idBack) {
+      alert("Identity Document (Back) is required!");
+      return;
+    }
 
     setIsSubmitting(true);
 
     try {
-      // Backend එකේ /api/users/vendor-profile වෙත දත්ත යවයි
-      const { data } = await API.put("/users/vendor-profile", formData);
+      // ✅ නිවැරදි API කෝල් එක
+      const response = await API.put("/users/vendor-profile", formData);
+      const data = response.data;
       
-      // Local storage එකේ ඇති User දත්ත අලුත් විස්තර සමඟ Update කිරීම
-      const updatedUser = { ...user, vendorDetails: data.vendorDetails };
-      localStorage.setItem("userInfo", JSON.stringify(updatedUser));
-      setUser(updatedUser);
-      setIsPending(true);
-      alert("Application submitted successfully! ✅");
+      if (data) {
+        const updatedUser = { 
+          ...user, 
+          vendorDetails: data.vendorDetails, 
+          role: 'vendor', 
+          isApproved: false 
+        };
+        
+        localStorage.setItem("userInfo", JSON.stringify(updatedUser));
+        setUser(updatedUser);
+        setIsPending(true);
+        alert("Application submitted successfully! ✅");
+      }
     } catch (error) {
       console.error("Setup Error:", error);
-      alert(error.response?.data?.message || "Failed to save details.");
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.error || 
+                          error.message || 
+                          "Failed to save vendor details.";
+      alert(`Error: ${errorMessage}`);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  /**
-   * ⏳ Verification පෙන්වන අවස්ථාව
-   */
   if (isPending) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
@@ -118,7 +147,7 @@ const VendorSetup = () => {
           </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Verification Pending</h2>
           <p className="text-gray-500 mb-6">
-            Hi {user?.name}, we have received your details. Our team is reviewing your documents to ensure safety. This usually takes 24-48 hours.
+            Hi {user?.name}, we have received your details. Our team is reviewing your documents. This usually takes 24-48 hours.
           </p>
           <button 
             onClick={() => { localStorage.removeItem("userInfo"); navigate("/login"); }} 
@@ -136,7 +165,7 @@ const VendorSetup = () => {
       <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
         <div className="bg-slate-900 px-8 py-6">
           <h2 className="text-2xl font-bold text-white text-shadow-sm">Vendor Registration</h2>
-          <p className="text-slate-400 mt-1">Complete your profile to start providing services on Lak Travelers.</p>
+          <p className="text-slate-400 mt-1">Complete your profile to start providing services.</p>
         </div>
 
         <form onSubmit={handleSubmit} className="p-8 space-y-8">
@@ -165,24 +194,23 @@ const VendorSetup = () => {
           {/* 2. BUSINESS DETAILS */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="col-span-2">
-              <label className="block text-sm font-bold text-gray-700 mb-1">Business / Brand Name</label>
-              <input type="text" name="businessName" value={formData.businessName} required onChange={handleChange} className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder="e.g. Ella Nature Resort" />
+              <label className="block text-sm font-bold text-gray-700 mb-1">Business Name</label>
+              <input type="text" name="businessName" value={formData.businessName} required onChange={handleChange} className="w-full px-4 py-3 rounded-xl border border-gray-300 outline-none" placeholder="e.g. Ella Nature Resort" />
             </div>
             <div>
               <label className="block text-sm font-bold text-gray-700 mb-1">Phone Number</label>
-              <input type="text" name="phone" value={formData.phone} required onChange={handleChange} className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="+94 77 ..." />
+              <input type="text" name="phone" value={formData.phone} required onChange={handleChange} className="w-full px-4 py-3 rounded-xl border border-gray-300 outline-none" placeholder="+94 77 ..." />
             </div>
             <div>
               <label className="block text-sm font-bold text-gray-700 mb-1">Business Address</label>
-              <input type="text" name="address" value={formData.address} required onChange={handleChange} className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="City, District" />
+              <input type="text" name="address" value={formData.address} required onChange={handleChange} className="w-full px-4 py-3 rounded-xl border border-gray-300 outline-none" placeholder="City, District" />
             </div>
           </div>
 
           {/* 3. DYNAMIC FIELDS */}
           <div className="bg-blue-50/50 p-6 rounded-2xl border border-blue-100">
             <h3 className="text-sm font-bold text-blue-900 uppercase tracking-wider mb-4 border-b border-blue-100 pb-2">
-              {formData.serviceType === 'hotel' ? '🏨 Hotel Specifics' : 
-               formData.serviceType === 'vehicle' ? '🚗 Vehicle Fleet' : '🚐 Guide Experience'}
+              Service Specifics
             </h3>
 
             {formData.serviceType === 'hotel' && (
@@ -198,7 +226,7 @@ const VendorSetup = () => {
                     </select>
                  </div>
                  <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Registration Number</label>
+                    <label className="block text-sm font-bold text-gray-700 mb-1">Registration No</label>
                     <input type="text" name="registrationNumber" value={formData.registrationNumber} onChange={handleChange} className="w-full px-4 py-3 rounded-xl border border-gray-300" placeholder="SLTDA Number" />
                  </div>
               </div>
@@ -211,7 +239,7 @@ const VendorSetup = () => {
                     <input type="number" name="vehicleFleetSize" value={formData.vehicleFleetSize} onChange={handleChange} className="w-full px-4 py-3 rounded-xl border border-gray-300" placeholder="Number of vehicles" />
                  </div>
                  <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Owner License No</label>
+                    <label className="block text-sm font-bold text-gray-700 mb-1">Registration No</label>
                     <input type="text" name="registrationNumber" value={formData.registrationNumber} onChange={handleChange} className="w-full px-4 py-3 rounded-xl border border-gray-300" placeholder="License Number" />
                  </div>
               </div>
@@ -220,18 +248,18 @@ const VendorSetup = () => {
             {formData.serviceType === 'tour' && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                  <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Languages Spoken</label>
-                    <input type="text" name="guideLanguages" value={formData.guideLanguages} onChange={handleChange} className="w-full px-4 py-3 rounded-xl border border-gray-300" placeholder="English, Sinhala, German..." />
+                    <label className="block text-sm font-bold text-gray-700 mb-1">Languages</label>
+                    <input type="text" name="guideLanguages" value={formData.guideLanguages} onChange={handleChange} className="w-full px-4 py-3 rounded-xl border border-gray-300" placeholder="English, Sinhala..." />
                  </div>
                  <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Years of Experience</label>
+                    <label className="block text-sm font-bold text-gray-700 mb-1">Years Experience</label>
                     <input type="number" name="experienceYears" value={formData.experienceYears} onChange={handleChange} className="w-full px-4 py-3 rounded-xl border border-gray-300" placeholder="e.g. 5" />
                  </div>
               </div>
             )}
 
             <div className="mt-4">
-              <label className="block text-sm font-bold text-gray-700 mb-1">Brief Description</label>
+              <label className="block text-sm font-bold text-gray-700 mb-1">Description</label>
               <textarea name="description" value={formData.description} rows="3" onChange={handleChange} className="w-full px-4 py-3 rounded-xl border border-gray-300 resize-none" placeholder="Tell travelers about your service..."></textarea>
             </div>
           </div>
@@ -246,17 +274,12 @@ const VendorSetup = () => {
                     <select 
                         value={docType}
                         onChange={(e) => setDocType(e.target.value)}
-                        className="w-full px-4 py-3 rounded-xl border border-gray-300 bg-white font-medium focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-4 py-3 rounded-xl border border-gray-300 bg-white"
                     >
                         <option value="nic">National Identity Card (NIC)</option>
                         <option value="license">Driving License</option>
                         <option value="passport">Passport</option>
                     </select>
-                    <p className="text-xs text-blue-600 font-medium">
-                        {docType === 'passport' 
-                            ? "* Upload the main photo page." 
-                            : "* Upload front and back sides clearly."}
-                    </p>
                  </div>
               
                 <UploadBox 
@@ -269,7 +292,7 @@ const VendorSetup = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <UploadBox 
-                label={docType === 'passport' ? "Passport Info Page" : "ID Front Side"} 
+                label={docType === 'passport' ? "Passport Photo Page" : "ID Front Side"} 
                 image={formData.idFront} 
                 loading={uploadingState.idFront}
                 onUpload={(e) => handleFileUpload(e.target.files[0], 'idFront')} 
@@ -289,9 +312,9 @@ const VendorSetup = () => {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full bg-slate-900 text-white font-extrabold py-4 rounded-xl hover:bg-slate-800 transition-all shadow-xl disabled:bg-gray-400 transform active:scale-[0.98]"
+            className="w-full bg-slate-900 text-white font-extrabold py-4 rounded-xl hover:bg-slate-800 transition shadow-xl disabled:bg-gray-400 disabled:cursor-not-allowed"
           >
-            {isSubmitting ? "Submitting Application..." : "Submit for Verification ✅"}
+            {isSubmitting ? "Submitting..." : "Submit for Verification ✅"}
           </button>
 
         </form>
@@ -300,20 +323,36 @@ const VendorSetup = () => {
   );
 };
 
-// Helper Component for Upload Boxes
+// ✅ SINGLE CORRECTED UploadBox Component
 const UploadBox = ({ label, image, loading, onUpload }) => {
     const getImageUrl = (path) => {
-        if (!path) return null;
-        if (path.startsWith('http')) return path;
-        const backendURL = "https://lak-travelers-api.vercel.app"; // ඔබේ Vercel URL
-        return `${backendURL}${path.startsWith('/') ? path : `/${path}`}`;
+        if (!path || typeof path !== 'string') return null;
+        
+        // Cloudinary URL (starts with http) නම් direct return කරන්න
+        if (path.startsWith('http')) {
+          return path;
+        }
+        
+        // Local file path නම්, backend URL එක සමඟ combine කරන්න
+        // Cloudinary වලින් direct URL එක ලැබෙන නිසා මෙය අවශ්‍ය නොවිය හැක
+        // නමුත් ආරක්ෂිතව සෑදීම සඳහා
+        const backendURL = import.meta.env.VITE_API_URL 
+          ? import.meta.env.VITE_API_URL.replace('/api', '') 
+          : 'http://localhost:5001';
+        
+        // Path එක /uploads/... වගේ නම් combine කරන්න
+        if (path.startsWith('/')) {
+          return `${backendURL}${path}`;
+        }
+        
+        return path;
     };
 
     return (
         <div className="flex flex-col gap-2">
             <label className="text-sm font-bold text-gray-700">{label}</label>
             <div className={`relative h-40 w-full border-2 border-dashed rounded-2xl flex items-center justify-center overflow-hidden transition-all duration-300 
-            ${image ? 'border-blue-500 bg-blue-50 shadow-inner' : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'}`}>
+            ${image ? 'border-blue-500 bg-blue-50 shadow-inner' : 'border-gray-300 hover:border-blue-400'}`}>
             
             {loading ? (
                 <div className="flex flex-col items-center gap-2">
@@ -321,15 +360,28 @@ const UploadBox = ({ label, image, loading, onUpload }) => {
                     <span className="text-[10px] font-bold text-blue-600">Uploading...</span>
                 </div>
             ) : image ? (
-                <img src={getImageUrl(image)} alt="Preview" className="w-full h-full object-cover" />
+                <img 
+                  src={getImageUrl(image)} 
+                  alt="Preview" 
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    console.error('Image load error:', image);
+                    e.target.src = 'https://via.placeholder.com/300x200?text=Image+Error';
+                  }}
+                />
             ) : (
                 <div className="text-center p-4">
-                <div className="text-2xl mb-1">📸</div>
-                <p className="text-xs text-gray-500 font-bold">Click to Upload</p>
+                  <div className="text-2xl mb-1">📸</div>
+                  <p className="text-xs text-gray-500 font-bold">Click to Upload</p>
                 </div>
             )}
             
-            <input type="file" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onChange={onUpload} accept="image/*" />
+            <input 
+              type="file" 
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" 
+              onChange={onUpload} 
+              accept="image/*" 
+            />
             </div>
         </div>
     );

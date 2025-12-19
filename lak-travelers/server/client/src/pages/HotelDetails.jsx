@@ -60,7 +60,8 @@ const HotelDetails = () => {
         bookingType: 'hotel', 
         hotelId: id, 
         checkInDate: checkIn, 
-        checkOutDate: checkOut 
+        checkOutDate: checkOut,
+        totalPrice: calculatedPrice
       });
       alert("Booking Successful! 🎉");
       navigate('/my-bookings');

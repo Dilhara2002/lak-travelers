@@ -69,7 +69,7 @@ const AddTour = () => {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       // Cloudinary මගින් ලැබෙන URL එක සකසයි
-      setFormData((prev) => ({ ...prev, image: res.data }));
+      setFormData((prev) => ({ ...prev, image: res.data.image }));
       alert('Image uploaded successfully! ✅');
     } catch (error) {
       console.error(error);

@@ -28,19 +28,21 @@ const getHotels = asyncHandler(async (req, res) => {
 const createHotel = asyncHandler(async (req, res) => {
   const { name, location, description, pricePerNight, image, mapUrl } = req.body;
 
-  // අත්‍යවශ්‍ය දත්ත තිබේදැයි පරීක්ෂා කිරීම
   if (!name || !location || !description || !pricePerNight || !image || !mapUrl) {
     res.status(400);
     throw new Error('Please fill all fields');
   }
 
+  // ✅ FIX: Image එක Object එකක් ලෙස ලැබෙන්නේ නම් එහි URL එක පමණක් ලබා ගැනීම
+  const finalImage = typeof image === 'object' ? image.image : image;
+
   const hotel = new Hotel({
-    user: req.user._id, // Auth middleware එකෙන් ලැබෙන ID එක
+    user: req.user._id,
     name,
     location,
     description,
     pricePerNight,
-    image,
+    image: finalImage, // String URL එක පමණක් Database එකට යයි
     mapUrl,
   });
 
@@ -73,7 +75,6 @@ const updateHotel = asyncHandler(async (req, res) => {
   const hotel = await Hotel.findById(req.params.id);
 
   if (hotel) {
-    // අයිතිකරු හෝ ඇඩ්මින් ද යන්න පරීක්ෂා කිරීම
     if (hotel.user.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
       res.status(401);
       throw new Error('Not authorized to update this hotel');
@@ -83,7 +84,12 @@ const updateHotel = asyncHandler(async (req, res) => {
     hotel.location = req.body.location || hotel.location;
     hotel.description = req.body.description || hotel.description;
     hotel.pricePerNight = req.body.pricePerNight || hotel.pricePerNight;
-    hotel.image = req.body.image || hotel.image;
+    
+    // ✅ FIX: මෙහිදීද Image එක String එකක් බව තහවුරු කරයි
+    if (req.body.image) {
+      hotel.image = typeof req.body.image === 'object' ? req.body.image.image : req.body.image;
+    }
+    
     hotel.mapUrl = req.body.mapUrl || hotel.mapUrl;
 
     const updatedHotel = await hotel.save();
@@ -96,14 +102,11 @@ const updateHotel = asyncHandler(async (req, res) => {
 
 /**
  * @desc    හෝටලයක් මකා දැමීම
- * @route   DELETE /api/hotels/:id
- * @access  Private (Vendor/Admin)
  */
 const deleteHotel = asyncHandler(async (req, res) => {
   const hotel = await Hotel.findById(req.params.id);
 
   if (hotel) {
-    // අයිතිකරු හෝ ඇඩ්මින් ද යන්න පරීක්ෂා කිරීම
     if (req.user.role === 'admin' || hotel.user.toString() === req.user._id.toString()) {
       await hotel.deleteOne();
       res.json({ message: 'Hotel removed successfully' });
@@ -128,7 +131,6 @@ const createHotelReview = asyncHandler(async (req, res) => {
   const hotel = await Hotel.findById(req.params.id);
 
   if (hotel) {
-    // දැනටමත් රිවීව් එකක් කර ඇත්දැයි බැලීම
     const alreadyReviewed = hotel.reviews.find(
       (r) => r.user.toString() === req.user._id.toString()
     );
