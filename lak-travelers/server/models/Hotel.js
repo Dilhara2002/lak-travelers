@@ -68,5 +68,6 @@ const hotelSchema = mongoose.Schema({
   timestamps: true,
 });
 
-const Hotel = mongoose.model('Hotel', hotelSchema);
+// models/hotel.js ඇතුළත අවසාන පේළිය මෙලෙස වෙනස් කරන්න
+const Hotel = mongoose.models.Hotel || mongoose.model("Hotel", hotelSchema);
 export default Hotel;

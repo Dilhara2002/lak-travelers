@@ -12,6 +12,7 @@ import tourRoutes from './routes/tourRoutes.js';
 import vehicleRoutes from './routes/vehicleRoutes.js';
 import bookingRoutes from './routes/bookingRoutes.js';
 import uploadRoutes from './routes/uploadRoutes.js';
+import aiRoutes from './routes/aiRoutes.js';
 
 import { notFound, errorHandler } from './middleware/errorMiddleware.js';
 
@@ -61,6 +62,7 @@ app.use('/api/tours', tourRoutes);
 app.use('/api/vehicles', vehicleRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/ai', aiRoutes);
 
 // Static files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));

@@ -23,7 +23,9 @@ const bookingSchema = mongoose.Schema(
   { timestamps: true }
 );
 
-const Booking = mongoose.model('Booking', bookingSchema);
 
-// 🚨 මෙන්න මේ පේළිය අනිවාර්යයි (Default export එක)
+
+// models/hotel.js ඇතුළත අවසාන පේළිය මෙලෙස වෙනස් කරන්න
+const Booking = mongoose.models.Booking || mongoose.model("Booking", bookingSchema);
 export default Booking;
+

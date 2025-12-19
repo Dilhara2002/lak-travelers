@@ -11,50 +11,69 @@ import Vehicle from '../models/Vehicle.js';
  * @access  Private/Admin
  */
 const getAdminStats = asyncHandler(async (req, res) => {
-  console.log("Admin Stats Request Received by:", req.user.name); 
+  // සත්‍යාපනය (Verification) සඳහා ලොග් එකක් දැමීම
+  console.log(`Admin Stats Requested by: ${req.user.name} (ID: ${req.user._id})`);
 
-  // 1. සියලුම අයිතමයන්ගේ එකතුව (Counts) ලබා ගැනීම
-  // Promise.all භාවිතා කිරීමෙන් එකවර සියලුම Queries ක්‍රියාත්මක වන නිසා වේගය වැඩි වේ.
-  const [
-    usersCount, 
-    vendorsCount, 
-    bookingsCount, 
-    hotelsCount, 
-    toursCount, 
-    vehiclesCount
-  ] = await Promise.all([
-    User.countDocuments({ role: 'user' }),
-    User.countDocuments({ role: 'role' === 'vendor' ? 'vendor' : 'vendor' }), // Role එක නිවැරදිව පරීක්ෂා කිරීම
-    Booking.countDocuments(),
-    Hotel.countDocuments(),
-    Tour.countDocuments(),
-    Vehicle.countDocuments(),
-  ]);
+  try {
+    // 1. සියලුම අයිතමයන්ගේ එකතුව (Counts) ලබා ගැනීම
+    // Promise.all භාවිතා කිරීමෙන් සියලුම Queries එකවර (Parallel) ක්‍රියාත්මක වේ.
+    const [
+      usersCount, 
+      vendorsCount, 
+      bookingsCount, 
+      hotelsCount, 
+      toursCount, 
+      vehiclesCount
+    ] = await Promise.all([
+      User.countDocuments({ role: 'user' }),
+      User.countDocuments({ role: 'vendor' }), // 👈 logic එක මෙහිදී නිවැරදි කරන ලදී
+      Booking.countDocuments(),
+      Hotel.countDocuments(),
+      Tour.countDocuments(),
+      Vehicle.countDocuments(),
+    ]);
 
-  // 2. මුළු ආදායම (Total Revenue) ගණනය කිරීම
-  // සියලුම Booking දත්ත මතකයට (Memory) ගෙන ඒම වෙනුවට Database එක තුළදීම එකතු කිරීම (Aggregate) වඩාත් කාර්යක්ෂමයි.
-  const revenueStats = await Booking.aggregate([
-    {
-      $group: {
-        _id: null,
-        total: { $sum: "$totalPrice" } // ඔබේ Booking Model එකේ totalPrice field එක තිබිය යුතුය
+    // 2. මුළු ආදායම (Total Revenue) ගණනය කිරීම
+    // Database එක තුළදීම $sum කිරීම වඩාත් වේගවත් වේ.
+    const revenueStats = await Booking.aggregate([
+      {
+        $group: {
+          _id: null,
+          total: { $sum: "$totalPrice" } 
+        }
       }
-    }
-  ]);
+    ]);
 
-  const totalRevenue = revenueStats.length > 0 ? revenueStats[0].total : 0;
+    const totalRevenue = revenueStats.length > 0 ? revenueStats[0].total : 0;
 
-  console.log("Stats Calculated Successfully ✅");
+    // 3. මෑතකදී සිදු වූ වෙන් කිරීම් (Recent Bookings) - විකල්ප (Optional)
+    // Dashboard එකට මෑත දත්ත කිහිපයක් පෙන්වීම ප්‍රයෝජනවත්ය.
+    const recentBookings = await Booking.find()
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .populate('user', 'name email');
 
-  res.json({
-    usersCount,
-    vendorsCount,
-    bookingsCount,
-    hotelsCount,
-    toursCount,
-    vehiclesCount,
-    totalRevenue
-  });
+    console.log("Admin Dashboard Stats Calculated Successfully ✅");
+
+    res.status(200).json({
+      success: true,
+      stats: {
+        usersCount,
+        vendorsCount,
+        bookingsCount,
+        hotelsCount,
+        toursCount,
+        vehiclesCount,
+        totalRevenue
+      },
+      recentBookings
+    });
+
+  } catch (error) {
+    console.error("Error calculating admin stats:", error);
+    res.status(500);
+    throw new Error("සංඛ්‍යාලේඛන ලබා ගැනීමේදී දෝෂයක් සිදු විය.");
+  }
 });
 
 export { getAdminStats };

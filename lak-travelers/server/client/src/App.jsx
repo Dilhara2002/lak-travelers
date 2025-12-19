@@ -4,7 +4,7 @@ import Footer from "./components/Footer";
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-// Pages Import (ඔබ එවූ ඒවාමයි...)
+// Pages Import
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -23,12 +23,17 @@ import EditTour from "./pages/EditTour";
 import VehicleList from "./pages/VehicleList";
 import VehicleDetails from "./pages/VehicleDetails";
 import AddVehicle from "./pages/AddVehicle";
+import PrivacyPolicy from "./pages/PrivacyPolicy"; // 👈 අලුතින් එක් කරන ලදී
+import AboutUs from "./pages/AboutUs";
 
+// Components Import
+import ChatBot from './components/ChatBot'; 
 
 import AdminBookings from './pages/AdminBookings';
 import VendorBookings from './pages/VendorBookings';
 
-// 🛡️ Protected Route Component: ලොග් වූ අයට පමණක් අවසර දීමට
+
+// 🛡️ Protected Route Component
 const ProtectedRoute = ({ children }) => {
   const userInfo = JSON.parse(localStorage.getItem('userInfo'));
   return userInfo ? children : <Navigate to="/login" />;
@@ -38,8 +43,10 @@ function App() {
   return (
     <Router>
       <ToastContainer position="top-center" autoClose={2000} />
-      <div className="font-sans bg-gray-50 text-gray-900 min-h-screen flex flex-col">
+      
+      <div className="font-sans bg-gray-50 text-gray-900 min-h-screen flex flex-col relative">
         <Navbar />
+        
         <main className="pt-24 flex-grow px-4 md:px-0">
           <Routes>
             {/* Public Routes */}
@@ -52,14 +59,15 @@ function App() {
             <Route path="/tours/:id" element={<TourDetails />} />
             <Route path="/vehicles" element={<VehicleList />} />
             <Route path="/vehicles/:id" element={<VehicleDetails />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} /> {/* 👈 අලුතින් එක් කරන ලද Route එක */}
 
-            {/* Private Routes (ලොග් වී සිටිය යුතුය) */}
+            {/* Private Routes */}
             <Route path="/profile" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
             <Route path="/my-bookings" element={<ProtectedRoute><MyBookings /></ProtectedRoute>} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/vendor-setup" element={<ProtectedRoute><VendorSetup /></ProtectedRoute>} />
 
-            {/* Vendor Specific (ලොග් වූ Vendor ට පමණක්) */}
+            {/* Vendor Specific */}
             <Route path="/add-hotel" element={<ProtectedRoute><AddHotel /></ProtectedRoute>} />
             <Route path="/edit-hotel/:id" element={<ProtectedRoute><EditHotel /></ProtectedRoute>} />
             <Route path="/add-tour" element={<ProtectedRoute><AddTour /></ProtectedRoute>} />
@@ -68,11 +76,16 @@ function App() {
 
             <Route path='/admin/bookings' element={<AdminBookings />} />
             <Route path='/vendor/bookings' element={<VendorBookings />} />
+            <Route path="/about" element={<AboutUs />} />
 
             {/* 404 */}
             <Route path="*" element={<div className="text-center py-20 font-bold text-gray-500">404 - 🏝️ පර්වතයක් සොයාගත නොහැක!</div>} />
           </Routes>
         </main>
+
+        {/* 🤖 AI CHATBOT */}
+        <ChatBot /> 
+
         <Footer />
       </div>
     </Router>
