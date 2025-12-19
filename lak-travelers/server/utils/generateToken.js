@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
 
 /**
- * @desc    JWT ටෝකනය සාදා එය HTTP-Only Cookie එකක් ලෙස සේවාදායකයා වෙත යැවීම
+ * @desc    JWT ටෝකනය සාදා එය HTTP-Only Cookie එකක් ලෙස යැවීම
  * @param   {Object} res - Express response object
  * @param   {String} userId - පරිශීලකයාගේ MongoDB ID එක
  */
@@ -13,16 +13,17 @@ const generateToken = (res, userId) => {
 
   // 2. Cookie එකක් ලෙස Client (Browser) වෙත යැවීම
   res.cookie('jwt', token, {
-    httpOnly: true,    // JavaScript මගින් Cookie එක කියවීම වළක්වයි (ආරක්ෂාව සඳහා)
+    httpOnly: true,    // XSS ප්‍රහාර වලින් ආරක්ෂා වීමට JavaScript access වළක්වයි
     
-    // Vercel වලදී අනිවාර්යයෙන්ම 'true' විය යුතුය. Localhost වලදී ද 'true' තිබීම ගැටලුවක් නොවේ 
-    // නමුත් ඔබේ Localhost එක HTTP නම් පමණක් මෙය ප්‍රශ්නයක් විය හැක.
-    secure: true,      
+    // ✅ NODE_ENV එක production (Vercel) නම් පමණක් secure: true වේ. 
+    // Localhost වලදී (development) false වීමෙන් Cookie එක වැඩ කිරීම සහතික කරයි.
+    secure: process.env.NODE_ENV !== 'development', 
     
-    // Frontend (localhost:5173) සහ Backend (vercel.app) අතර Cookie හුවමාරුවට 'none' අනිවාර්යයයි
-    sameSite: 'none',  
+    // ✅ Cross-site cookies සඳහා Vercel වලදී 'none' අවශ්‍යයි. 
+    // නමුත් localhost එකේදී 'lax' තිබීම වඩාත් ස්ථාවරයි.
+    sameSite: process.env.NODE_ENV === 'development' ? 'lax' : 'none',
     
-    maxAge: 30 * 24 * 60 * 60 * 1000, // දින 30 කින් කල් ඉකුත් වේ
+    maxAge: 30 * 24 * 60 * 60 * 1000, // දින 30 ක කාලයක්
     path: '/',
   });
 };

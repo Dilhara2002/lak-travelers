@@ -1,59 +1,52 @@
-import path from 'path';
 import express from 'express';
 import multer from 'multer';
+import { v2 as cloudinary } from 'cloudinary';
+import { CloudinaryStorage } from 'multer-storage-cloudinary';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const router = express.Router();
 
-// 1. Storage සැකසුම
-const storage = multer.diskStorage({
-  destination(req, file, cb) {
-    // Vercel හිදී ස්ථිරවම ගොනු ගබඩා කළ නොහැක. 
-    // දේශීයව (Local) වැඩ කරන විට 'uploads/' භාවිතා කරන්න. 
-    // Vercel වලදී පමණක් '/tmp' භාවිතා කරන්න.
-    cb(null, process.env.NODE_ENV === 'production' ? '/tmp' : 'uploads/');
-  },
-  filename(req, file, cb) {
-    cb(
-      null,
-      `${file.fieldname}-${Date.now()}${path.extname(file.originalname)}`
-    );
-  },
+// 1. Cloudinary Config (Environment Variables පාවිච්චි කරයි)
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// 2. File Type එක පරීක්ෂා කිරීම
-function checkFileType(file, cb) {
-  const filetypes = /jpg|jpeg|png|webp/; // webp ද ඇතුළත් කළා
-  const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
-  const mimetype = filetypes.test(file.mimetype);
-
-  if (extname && mimetype) {
-    return cb(null, true);
-  } else {
-    cb(new Error('Images only (jpg, jpeg, png, webp)!'));
-  }
-}
+// 2. Cloudinary Storage Engine එක සැකසීම
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'lak-travelers-uploads', // Cloudinary හි සාදනු ලබන folder එක
+    allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
+    transformation: [{ width: 1000, height: 1000, crop: 'limit' }],
+  },
+});
 
 // 3. Multer Middleware
-const upload = multer({
-  storage,
-  fileFilter: function (req, file, cb) {
-    checkFileType(file, cb);
-  },
+const upload = multer({ 
+  storage: storage,
+  limits: { fileSize: 5 * 1024 * 1024 } // උපරිම 5MB
 });
 
-// 4. POST Route - තනි පින්තූරයක් Upload කිරීම
+// 4. POST Route
 router.post('/', upload.single('image'), (req, res) => {
-  if (!req.file) {
-    res.status(400);
-    throw new Error('No file uploaded');
-  }
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'No file uploaded' });
+    }
 
-  // Frontend එකට URL එක යැවීම
-  // සටහන: Vercel හිදී ස්ථිර පින්තූර ගබඩාවකට (Cloudinary) මාරු වීම අනිවාර්ය වේ.
-  res.send({
-    message: 'Image uploaded successfully',
-    image: `/${req.file.path}`, 
-  });
+    // Cloudinary මගින් දෙන ස්ථිර URL එක JSON එකක් විදිහට යවයි
+    res.status(200).json({
+      message: 'Image uploaded successfully ✅',
+      image: req.file.path, // මෙහි තිබෙන්නේ https://res.cloudinary.com/... වැනි URL එකක්
+    });
+  } catch (error) {
+    console.error('Upload Error:', error);
+    res.status(500).json({ message: 'Upload failed', error: error.message });
+  }
 });
 
 export default router;

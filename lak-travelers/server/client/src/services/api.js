@@ -1,33 +1,35 @@
 import axios from 'axios';
 
 /**
- * Axios Instance එක නිර්මාණය කිරීම
+ * Axios Instance
+ * Backend API සමඟ communicate කරන්න
  */
 const API = axios.create({
-  // ඔබගේ Vercel Backend URL එක
-  baseURL: 'https://lak-travelers-oqpg.vercel.app/api', 
-  
-  // 👈 Cookies (JWT) Browser එක සහ Backend එක අතර හුවමාරු වීමට මෙය අත්‍යවශ්‍යයි
-  withCredentials: true, 
-  
+  // ✅ Backend URL (env වලින් ගන්න එක best practice)
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5001/api',
+
+  // ✅ Cookies (JWT) send / receive කරන්න අනිවාර්යයි
+  withCredentials: true,
+
   headers: {
     'Content-Type': 'application/json',
-    'Accept': 'application/json',
-  }
+    Accept: 'application/json',
+  },
 });
 
 /**
- * 🛠️ Interceptor එකක් එක් කිරීම (විකල්ප නමුත් වැදගත්)
- * මෙය මගින් කිසියම් හේතුවකින් 401 (Unauthorized) error එකක් ආවොත් 
- * ස්වයංක්‍රීයව Logout කිරීමට හෝ දෝෂය හඳුනා ගැනීමට උදව් වේ.
+ * 🔐 Response Interceptor
+ * 401 Unauthorized ආවොත් auto handle කරගන්න
  */
 API.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response && error.response.status === 401) {
-      // Session එක ඉකුත් වී ඇත්නම් Local Data පිරිසිදු කරයි
+    if (error.response?.status === 401) {
+      // Session expire උනොත් local data clear කරනවා
       localStorage.removeItem('userInfo');
-      // අවශ්‍ය නම් මෙතැනදී navigate('/login') කළ හැක
+
+      // Optional: redirect to login
+      // window.location.href = '/login';
     }
     return Promise.reject(error);
   }
