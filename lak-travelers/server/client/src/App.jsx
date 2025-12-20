@@ -23,15 +23,14 @@ import EditTour from "./pages/EditTour";
 import VehicleList from "./pages/VehicleList";
 import VehicleDetails from "./pages/VehicleDetails";
 import AddVehicle from "./pages/AddVehicle";
-import PrivacyPolicy from "./pages/PrivacyPolicy"; // 👈 අලුතින් එක් කරන ලදී
+
+import LegalPolicy from "./pages/LegalPolicy";
 import AboutUs from "./pages/AboutUs";
 
 // Components Import
 import ChatBot from './components/ChatBot'; 
-
 import AdminBookings from './pages/AdminBookings';
 import VendorBookings from './pages/VendorBookings';
-
 
 // 🛡️ Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -49,7 +48,6 @@ function App() {
         
         <main className="pt-24 flex-grow px-4 md:px-0">
           <Routes>
-            {/* Public Routes */}
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
@@ -59,33 +57,29 @@ function App() {
             <Route path="/tours/:id" element={<TourDetails />} />
             <Route path="/vehicles" element={<VehicleList />} />
             <Route path="/vehicles/:id" element={<VehicleDetails />} />
-            <Route path="/privacy" element={<PrivacyPolicy />} /> {/* 👈 අලුතින් එක් කරන ලද Route එක */}
 
-            {/* Private Routes */}
             <Route path="/profile" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
             <Route path="/my-bookings" element={<ProtectedRoute><MyBookings /></ProtectedRoute>} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/vendor-setup" element={<ProtectedRoute><VendorSetup /></ProtectedRoute>} />
 
-            {/* Vendor Specific */}
             <Route path="/add-hotel" element={<ProtectedRoute><AddHotel /></ProtectedRoute>} />
             <Route path="/edit-hotel/:id" element={<ProtectedRoute><EditHotel /></ProtectedRoute>} />
             <Route path="/add-tour" element={<ProtectedRoute><AddTour /></ProtectedRoute>} />
             <Route path="/edit-tour/:id" element={<ProtectedRoute><EditTour /></ProtectedRoute>} />
             <Route path="/add-vehicle" element={<ProtectedRoute><AddVehicle /></ProtectedRoute>} />
 
-            <Route path='/admin/bookings' element={<AdminBookings />} />
-            <Route path='/vendor/bookings' element={<VendorBookings />} />
+            <Route path='/admin/bookings' element={<ProtectedRoute><AdminBookings /></ProtectedRoute>} />
+            <Route path='/vendor/bookings' element={<ProtectedRoute><VendorBookings /></ProtectedRoute>} />
+
+            <Route path="/privacy" element={<LegalPolicy />} />
             <Route path="/about" element={<AboutUs />} />
 
-            {/* 404 */}
-            <Route path="*" element={<div className="text-center py-20 font-bold text-gray-500">404 - 🏝️ පර්වතයක් සොයාගත නොහැක!</div>} />
+            <Route path="*" element={<div className="text-center py-20 font-bold text-gray-500">404 - Not Found</div>} />
           </Routes>
         </main>
 
-        {/* 🤖 AI CHATBOT */}
         <ChatBot /> 
-
         <Footer />
       </div>
     </Router>

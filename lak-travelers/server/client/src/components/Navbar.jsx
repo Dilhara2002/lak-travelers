@@ -8,35 +8,33 @@ const Navbar = () => {
   const location = useLocation();
   
   // LocalStorage එකෙන් User තොරතුරු ලබා ගැනීම
-  // සටහන: මෙය පසුව Redux හෝ Context API එකකට මාරු කිරීම වඩාත් සුදුසුයි
   const [user, setUser] = useState(JSON.parse(localStorage.getItem("userInfo")));
 
-  // පිටුව මාරු වන සෑම අවස්ථාවකම User තොරතුරු අලුත් දැයි පරීක්ෂා කරයි
+  // පිටුව මාරු වන සෑම අවස්ථාවකම හෝ localStorage වෙනස් වන විට දත්ත අලුත් කරයි
   useEffect(() => {
-    setUser(JSON.parse(localStorage.getItem("userInfo")));
+    const handleStorageChange = () => {
+      setUser(JSON.parse(localStorage.getItem("userInfo")));
+    };
+
+    handleStorageChange();
+    
+    // UserProfile එකෙන් එවන storage event එකට සවන් දීම
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, [location]);
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  /**
-   * ලොග් අවුට් වීමේ ක්‍රියාවලිය
-   */
   const handleLogout = async () => {
     try {
-      // Backend එකට Logout request එක යවා Cookie එක ඉවත් කරයි
       await API.post("/users/logout");
-      
-      // LocalStorage එකෙන් දත්ත ඉවත් කරයි
       localStorage.removeItem("userInfo");
-      
-      // තොරතුරු reset කර ලොගින් පිටුවට යවයි
       setIsDropdownOpen(false);
       navigate("/login");
-      window.location.reload(); // Auth state එක සම්පූර්ණයෙන්ම clear කිරීමට
+      window.location.reload(); 
     } catch (error) {
       console.error("Logout error:", error);
-      // Backend එක අවුල් වුවත් local data අනිවාර්යයෙන් අයින් කරයි
       localStorage.removeItem("userInfo");
       navigate("/login");
     }
@@ -105,8 +103,19 @@ const Navbar = () => {
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                 className="flex items-center gap-2 rounded-full p-1 pr-3 bg-gray-50 border border-gray-200 hover:bg-white hover:shadow-md transition duration-200 focus:outline-none"
               >
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-600 text-white font-bold text-sm shadow-sm">
-                  {user.name.charAt(0).toUpperCase()}
+                {/* ✅ යාවත්කාලීන කළ පින්තූර කොටස */}
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-600 overflow-hidden shadow-sm">
+                  {user.profileImage ? (
+                    <img 
+                      src={user.profileImage} 
+                      alt={user.name} 
+                      className="h-full w-full object-cover" 
+                    />
+                  ) : (
+                    <span className="text-white font-bold text-sm">
+                      {user.name.charAt(0).toUpperCase()}
+                    </span>
+                  )}
                 </div>
                 <span className="hidden sm:block text-sm font-bold text-gray-700 max-w-[120px] truncate">{user.name}</span>
                 <svg 

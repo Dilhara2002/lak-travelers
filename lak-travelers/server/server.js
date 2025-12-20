@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import app from './app.js'; 
 import aiRoutes from './routes/aiRoutes.js';
-// 🚨 වැදගත්: Error Middleware මෙහිදී Import කරගන්න
+import userRoutes from './routes/userRoutes.js'; // 👈 User routes අමතක කරන්න එපා
 import { notFound, errorHandler } from './middleware/errorMiddleware.js';
 
 dotenv.config();
@@ -23,13 +23,20 @@ const connectDB = async () => {
 };
 
 /**
- * 🤖 2. AI Routes Registration
- * 🚨 මෙය අනිවාර්යයෙන්ම Error Middleware (notFound) වලට පෙර තිබිය යුතුය.
+ * 🚀 2. IMPORTANT: Global Middleware (Limit Setup)
+ * මේ පේළි දෙක අනිවාර්යයෙන්ම Routes වලට ඉහළින් තිබිය යුතුය.
  */
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+/**
+ * 🤖 3. Routes Registration
+ */
+app.use('/api/users', userRoutes); // 👈 User Profile/OTP/Register සියල්ල මෙහි ඇත
 app.use('/api/ai', aiRoutes);
 
 /**
- * 📦 3. Production Setup (Hosting)
+ * 📦 4. Production Setup (Hosting)
  */
 const __dirname = path.resolve();
 if (process.env.NODE_ENV === 'production') {
@@ -45,8 +52,7 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 /**
- * 🚨 4. Final Error Handling Middleware
- * කිසිදු Route එකක් match නොවූ විට පමණක් මෙය ක්‍රියාත්මක වේ.
+ * 🚨 5. Final Error Handling Middleware
  */
 app.use(notFound);
 app.use(errorHandler);
@@ -55,7 +61,7 @@ app.use(errorHandler);
 connectDB();
 
 /**
- * 🚀 5. Start Server
+ * 🚀 6. Start Server
  */
 const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => {
