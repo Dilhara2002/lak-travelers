@@ -9,8 +9,6 @@ const VendorSetup = () => {
     return savedUser ? JSON.parse(savedUser) : null;
   });
 
-  
-
   // Form Data State
   const [formData, setFormData] = useState({
     businessName: "",

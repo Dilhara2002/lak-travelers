@@ -62,6 +62,7 @@ function App() {
             <Route path="/my-bookings" element={<ProtectedRoute><MyBookings /></ProtectedRoute>} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/vendor-setup" element={<ProtectedRoute><VendorSetup /></ProtectedRoute>} />
+            <Route path="/my-bookings" element={<MyBookings />} />
 
             <Route path="/add-hotel" element={<ProtectedRoute><AddHotel /></ProtectedRoute>} />
             <Route path="/edit-hotel/:id" element={<ProtectedRoute><EditHotel /></ProtectedRoute>} />

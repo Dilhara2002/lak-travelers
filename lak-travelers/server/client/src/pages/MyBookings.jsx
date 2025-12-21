@@ -1,58 +1,50 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import API from '../services/api'; // අපි සාදාගත් API instance එක
+import { Link, useNavigate } from 'react-router-dom';
+import API from '../services/api'; 
 
 const MyBookings = () => {
+  const navigate = useNavigate();
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  /**
-   * 1. පරිශීලකයාගේ වෙන්කරවා ගැනීම් (Bookings) ලබා ගැනීම
-   */
-  const fetchBookings = async () => {
+  const fetchMyBookings = async () => {
     try {
-      // Backend එකේ /api/bookings/mybookings වෙතින් දත්ත ලබා ගනී
+      setLoading(true);
       const { data } = await API.get('/bookings/mybookings');
+      
+      // දත්ත ලැබෙන ආකාරය Console එකේ පරීක්ෂා කරන්න
+      console.log("Response Data:", data);
+      
       setBookings(data);
-      setLoading(false);
     } catch (error) {
-      console.error("Error fetching bookings:", error);
+      console.error("Fetch error:", error);
+      if (error.response?.status === 401) navigate('/login');
+    } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchBookings();
-  }, []);
+    fetchMyBookings();
+  }, []); 
 
-  /**
-   * 2. වෙන්කරවා ගැනීමක් අවලංගු කිරීම (Cancel)
-   */
   const handleCancel = async (id) => {
-    if (window.confirm("Are you sure you want to cancel this booking? ❌")) {
+    if (window.confirm("Are you sure you want to cancel this reservation?")) {
       try {
-        await API.delete(`/bookings/${id}`);
-        // ලිස්ට් එකෙන් වහාම ඉවත් කර පෙන්වයි (Optimistic UI Update)
-        setBookings(bookings.filter((b) => b._id !== id));
+        await API.put(`/bookings/${id}/cancel`);
+        fetchMyBookings();
         alert("Booking cancelled successfully!");
       } catch (error) {
-        console.error("Cancel Error:", error);
-        alert(error.response?.data?.message || "Failed to cancel booking");
+        alert(error.response?.data?.message || "Action failed");
       }
     }
   };
 
-  /**
-   * පින්තූර URL එක සකසන Helper Function එක
-   */
   const getImageUrl = (imagePath) => {
     if (!imagePath) return "https://via.placeholder.com/400x300?text=No+Image";
-    // Cloudinary URL එකක් නම් එලෙසම පෙන්වයි
     if (imagePath.startsWith("http")) return imagePath;
-    
-    const backendURL = "https://lak-travelers-api.vercel.app"; // ඔබේ Vercel Backend URL එක
-    const cleanPath = imagePath.startsWith("/") ? imagePath : `/${imagePath}`;
-    return `${backendURL}${cleanPath}`;
+    const backendURL = "http://localhost:5001";
+    return `${backendURL}${imagePath.startsWith("/") ? imagePath : `/${imagePath}`}`;
   };
 
   if (loading) return (
@@ -62,123 +54,103 @@ const MyBookings = () => {
   );
 
   return (
-    <div className="min-h-screen bg-slate-50 py-12 px-4 sm:px-6 lg:px-8 font-sans mt-12">
+    <div className="min-h-screen bg-slate-50 py-12 px-4 mt-12">
       <div className="max-w-7xl mx-auto">
         
-        {/* Header Section */}
-        <div className="flex flex-col md:flex-row justify-between items-end mb-8 border-b border-slate-200 pb-6">
+        <header className="mb-8 border-b pb-6 flex justify-between items-end">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900">My Bookings</h1>
-            <p className="text-slate-500 mt-1">Manage your upcoming trips and rentals in Sri Lanka.</p>
+            <h1 className="text-3xl font-black text-slate-900 tracking-tight">My Reservations 🎒</h1>
+            <p className="text-slate-500 mt-1">Track and manage your upcoming trips in Sri Lanka.</p>
           </div>
-          <div className="text-sm font-medium text-slate-500 bg-white px-4 py-2 rounded-lg border border-slate-200 shadow-sm mt-4 md:mt-0">
-            Total Bookings: <span className="text-slate-900 font-bold">{bookings.length}</span>
+          <div className="bg-white px-4 py-2 rounded-xl border border-slate-200 font-bold text-blue-600 shadow-sm">
+            Total: {bookings.length}
           </div>
-        </div>
-      
+        </header>
+
         {bookings.length === 0 ? (
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-12 text-center max-w-2xl mx-auto mt-10">
-            <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-6 text-4xl">📅</div>
-            <h2 className="text-2xl font-bold text-slate-900 mb-2">No bookings found</h2>
-            <p className="text-slate-500 mb-8">You haven't made any reservations yet. Start planning your next adventure!</p>
-            <div className="flex flex-wrap justify-center gap-4">
-              <Link to="/hotels" className="px-6 py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition shadow-md">Find Hotels 🏨</Link>
-              <Link to="/tours" className="px-6 py-3 bg-emerald-600 text-white rounded-lg font-bold hover:bg-emerald-700 transition shadow-md">Explore Tours 🚐</Link>
-              <Link to="/vehicles" className="px-6 py-3 bg-amber-500 text-white rounded-lg font-bold hover:bg-amber-600 transition shadow-md">Rent Vehicles 🚗</Link>
-            </div>
+          <div className="bg-white rounded-3xl p-12 text-center border border-slate-200 shadow-sm max-w-xl mx-auto mt-10">
+            <p className="text-gray-400 font-bold mb-4">No active bookings found.</p>
+            <Link to="/" className="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold inline-block hover:bg-blue-700 transition shadow-lg">
+              Explore Now
+            </Link>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {bookings.map((booking) => {
+              // 🛡️ ආරක්ෂිතව දත්ත ලබා ගැනීම (Populated Item)
+              const item = booking.hotel || booking.tour || booking.vehicle;
               
-              let item = null;
-              let typeLabel = "";
-              let badgeColor = "";
-              let bookingDetails = null;
+              // Status formatting
+              const statusKey = booking.status ? booking.status.toLowerCase() : 'pending';
+              const statusStyles = {
+                confirmed: "bg-emerald-500 text-white",
+                pending: "bg-amber-500 text-white",
+                cancelled: "bg-rose-500 text-white",
+                rejected: "bg-slate-400 text-white"
+              };
 
-              // Hotel Booking Logic
-              if (booking.bookingType === 'hotel' && booking.hotel) {
-                item = booking.hotel;
-                typeLabel = "Hotel Stay";
-                badgeColor = "bg-blue-600";
-                bookingDetails = (
-                  <>
-                    <p className="flex justify-between"><span className="text-slate-400">Check-in:</span> <span className="font-medium text-slate-700">{booking.checkInDate}</span></p>
-                    <p className="flex justify-between"><span className="text-slate-400">Check-out:</span> <span className="font-medium text-slate-700">{booking.checkOutDate}</span></p>
-                  </>
-                );
-              } 
-              // Tour Booking Logic
-              else if (booking.bookingType === 'tour' && booking.tour) {
-                item = booking.tour;
-                typeLabel = "Tour Package";
-                badgeColor = "bg-emerald-600";
-                bookingDetails = (
-                  <>
-                    <p className="flex justify-between"><span className="text-slate-400">Date:</span> <span className="font-medium text-slate-700">{booking.tourDate}</span></p>
-                    <p className="flex justify-between"><span className="text-slate-400">Travelers:</span> <span className="font-medium text-slate-700">{booking.peopleCount} People</span></p>
-                  </>
-                );
-              } 
-              // Vehicle Booking Logic
-              else if (booking.bookingType === 'vehicle' && booking.vehicle) {
-                item = booking.vehicle;
-                typeLabel = "Vehicle Rental";
-                badgeColor = "bg-amber-500";
-                bookingDetails = (
-                  <>
-                    <p className="flex justify-between"><span className="text-slate-400">Pickup Date:</span> <span className="font-medium text-slate-700">{booking.pickupDate}</span></p>
-                    <p className="flex justify-between"><span className="text-slate-400">Location:</span> <span className="font-medium text-slate-700 truncate ml-2">{booking.pickupLocation}</span></p>
-                  </>
+              // ⚠️ පවතින දත්තවල item එක නැතිනම් (Console එකේ තිබූ ගැටලුව)
+              if (!item) {
+                return (
+                  <div key={booking._id} className="bg-white rounded-3xl p-6 border border-dashed border-slate-300 flex flex-col items-center justify-center text-center">
+                    <span className="text-4xl mb-3">⚠️</span>
+                    <h3 className="font-bold text-slate-800">Incomplete Booking</h3>
+                    <p className="text-xs text-slate-400 mt-1">Ref ID: {booking._id.slice(-6).toUpperCase()}</p>
+                    <p className="text-xs text-rose-500 mt-2">මෙම බුකින් එකේ විස්තර නිවැරදිව සේව් වී නැත. අලුතින් බුකින් එකක් සිදුකර පරීක්ෂා කරන්න.</p>
+                    <div className="mt-4 text-left w-full space-y-1 bg-slate-50 p-3 rounded-lg">
+                        <p className="text-[10px] text-slate-500"><b>Price:</b> Rs.{booking.totalPrice?.toLocaleString()}</p>
+                        <p className="text-[10px] text-slate-500"><b>Date:</b> {booking.checkInDate || booking.tourDate || booking.pickupDate || 'N/A'}</p>
+                    </div>
+                  </div>
                 );
               }
 
-              if (!item) return null;
-
-              const imageSrc = Array.isArray(item.images) && item.images.length > 0 
-                ? item.images[0] 
-                : item.image;
+              // item එක තිබේ නම් සාමාන්‍ය පරිදි පෙන්වීම
+              const title = item.name || item.vehicleModel || "Booking Item";
+              const imageSrc = Array.isArray(item.images) ? item.images[0] : (item.image || item.images);
 
               return (
-                <div key={booking._id} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-shadow duration-300 flex flex-col h-full group">
+                <div key={booking._id} className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-xl transition-all duration-300 flex flex-col h-full group">
                   <div className="relative h-48 overflow-hidden bg-slate-100">
                     <img 
                       src={getImageUrl(imageSrc)} 
-                      alt={item.name || item.vehicleModel} 
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                      onError={(e) => { e.target.src = "https://via.placeholder.com/400x300?text=Image+Not+Found" }}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
+                      alt={title} 
                     />
-                    <div className="absolute top-3 left-3 bg-white/90 backdrop-blur px-2 py-1 rounded text-xs font-bold text-green-600 shadow-sm flex items-center gap-1">
-                      <span>✅</span> Confirmed
-                    </div>
-                    <div className={`absolute top-3 right-3 px-3 py-1 rounded-full text-white text-xs font-bold uppercase tracking-wider shadow-sm ${badgeColor}`}>
-                      {typeLabel}
+                    
+                    <div className={`absolute top-4 left-4 backdrop-blur-md px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest shadow-sm border border-white/20 ${statusStyles[statusKey] || 'bg-gray-500'}`}>
+                      {statusKey}
                     </div>
                   </div>
 
                   <div className="p-6 flex-grow">
-                    <h3 className="text-lg font-bold text-slate-900 mb-1 truncate">
-                      {item.name || item.vehicleModel}
-                    </h3>
-                    <div className="flex items-center text-slate-500 text-xs mb-4">
-                      <span className="mr-1">📍</span>
-                      <span className="truncate">{item.location || item.destinations || "Sri Lanka"}</span>
-                    </div>
-                    <div className="space-y-2 text-sm border-t border-slate-100 pt-4">
-                      {bookingDetails}
+                    <h3 className="text-lg font-black text-slate-900 mb-4 truncate">{title}</h3>
+                    
+                    <div className="space-y-2 text-xs font-bold text-slate-500">
+                      <p className="flex justify-between border-b border-slate-50 pb-2">
+                        <span>Total Price:</span>
+                        <span className="text-slate-900">Rs.{booking.totalPrice?.toLocaleString()}</span>
+                      </p>
+                      
+                      {booking.hotel && <p className="flex justify-between"><span>Check-in:</span> <span className="text-slate-700">{booking.checkInDate}</span></p>}
+                      {booking.tour && <p className="flex justify-between"><span>Date:</span> <span className="text-slate-700">{booking.tourDate}</span></p>}
+                      {booking.vehicle && <p className="flex justify-between"><span>Pickup:</span> <span className="text-slate-700">{booking.pickupDate}</span></p>}
                     </div>
                   </div>
 
-                  <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-between items-center">
-                     <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                       ID: <span className="font-mono font-normal">{booking._id.slice(-6).toUpperCase()}</span>
-                     </span>
-                     <button 
-                        onClick={() => handleCancel(booking._id)}
-                        className="text-red-600 hover:text-red-700 text-sm font-bold flex items-center gap-1 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors"
+                  <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-between items-center">
+                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
+                      REF: {booking._id.slice(-6).toUpperCase()}
+                    </span>
+                    
+                    {statusKey === 'pending' && (
+                      <button 
+                        onClick={() => handleCancel(booking._id)} 
+                        className="text-rose-600 hover:bg-rose-100 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase"
                       >
-                         Cancel <span className="text-lg leading-none">×</span>
-                     </button>
+                        Cancel
+                      </button>
+                    )}
                   </div>
                 </div>
               );

@@ -2,12 +2,11 @@ import asyncHandler from 'express-async-handler';
 import Vehicle from '../models/Vehicle.js';
 
 /**
- * @desc    සියලුම වාහන ලබා ගැනීම
+ * @desc    Fetch all vehicles (with search functionality)
  * @route   GET /api/vehicles
  * @access  Public
  */
 const getVehicles = asyncHandler(async (req, res) => {
-  // සෙවුම් පහසුකම් සඳහා keyword එකක් තිබේදැයි බලයි
   const keyword = req.query.keyword
     ? {
         vehicleModel: {
@@ -17,12 +16,12 @@ const getVehicles = asyncHandler(async (req, res) => {
       }
     : {};
 
-  const vehicles = await Vehicle.find({ ...keyword }).populate('user', 'name email');
+  const vehicles = await Vehicle.find({ ...keyword }).populate('user', 'name email').sort({ createdAt: -1 });
   res.json(vehicles);
 });
 
 /**
- * @desc    ID එක අනුව වාහනයක විස්තර ලබා ගැනීම
+ * @desc    Get vehicle details by ID
  * @route   GET /api/vehicles/:id
  * @access  Public
  */
@@ -38,12 +37,12 @@ const getVehicleById = asyncHandler(async (req, res) => {
 });
 
 /**
- * @desc    අලුත් වාහනයක් ඇතුළත් කිරීම
+ * @desc    Create a new vehicle listing
  * @route   POST /api/vehicles
  * @access  Private (Vendor / Admin)
  */
 const createVehicle = asyncHandler(async (req, res) => {
-  // 🔐 ආරක්ෂක පියවර: අනුමත වූ Vendor කෙනෙක් දැයි බැලීම
+  // Check if Vendor is approved before allowing creation
   if (req.user.role === 'vendor' && !req.user.isApproved) {
     res.status(403);
     throw new Error('Your vendor account is not approved yet by admin');
@@ -61,14 +60,17 @@ const createVehicle = asyncHandler(async (req, res) => {
     images,
   } = req.body;
 
-  // 🛑 අත්‍යවශ්‍ය දත්ත Validation
+  // Validation
   if (!driverName || !vehicleModel || !type || !licensePlate || !capacity || !pricePerDay || !contactNumber || !images || images.length === 0) {
     res.status(400);
     throw new Error('Please fill all required fields and upload at least one image');
   }
 
+  // Handle images if they come as objects from the upload route
+  const processedImages = images.map(img => typeof img === 'object' ? img.image : img);
+
   const vehicle = new Vehicle({
-    user: req.user._id, // Auth middleware එකෙන් ලැබෙන ID එක
+    user: req.user._id,
     driverName,
     vehicleModel,
     type,
@@ -77,7 +79,7 @@ const createVehicle = asyncHandler(async (req, res) => {
     pricePerDay,
     description,
     contactNumber,
-    images,
+    images: processedImages,
   });
 
   const createdVehicle = await vehicle.save();
@@ -85,18 +87,21 @@ const createVehicle = asyncHandler(async (req, res) => {
 });
 
 /**
- * @desc    වාහනයක විස්තර යාවත්කාලීන කිරීම
+ * @desc    Update vehicle details
  * @route   PUT /api/vehicles/:id
- * @access  Private (Vendor/Admin)
+ * @access  Private (Owner / Admin)
  */
 const updateVehicle = asyncHandler(async (req, res) => {
   const vehicle = await Vehicle.findById(req.params.id);
 
   if (vehicle) {
-    // 🔐 ආරක්ෂක පියවර: අයිතිකරුට හෝ ඇඩ්මින්ට පමණක් අවසරය
-    if (vehicle.user.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+    // 🛡️ SECURITY CHECK: Is the logged-in user the owner or an admin?
+    const isOwner = vehicle.user.toString() === req.user._id.toString();
+    const isAdmin = req.user.role === 'admin';
+
+    if (!isOwner && !isAdmin) {
       res.status(401);
-      throw new Error('Not authorized to update this vehicle listing');
+      throw new Error('Not authorized. You can only update vehicles that you own.');
     }
 
     vehicle.driverName = req.body.driverName || vehicle.driverName;
@@ -107,7 +112,10 @@ const updateVehicle = asyncHandler(async (req, res) => {
     vehicle.pricePerDay = req.body.pricePerDay || vehicle.pricePerDay;
     vehicle.description = req.body.description || vehicle.description;
     vehicle.contactNumber = req.body.contactNumber || vehicle.contactNumber;
-    vehicle.images = req.body.images || vehicle.images;
+
+    if (req.body.images) {
+      vehicle.images = req.body.images.map(img => typeof img === 'object' ? img.image : img);
+    }
 
     const updatedVehicle = await vehicle.save();
     res.json(updatedVehicle);
@@ -118,21 +126,24 @@ const updateVehicle = asyncHandler(async (req, res) => {
 });
 
 /**
- * @desc    වාහනයක් මකා දැමීම
+ * @desc    Delete a vehicle
  * @route   DELETE /api/vehicles/:id
- * @access  Private (Admin or Owner)
+ * @access  Private (Owner / Admin)
  */
 const deleteVehicle = asyncHandler(async (req, res) => {
   const vehicle = await Vehicle.findById(req.params.id);
 
   if (vehicle) {
-    // 🔐 Admin හෝ අයිතිකරුට පමණක් අවසරය
-    if (req.user.role === 'admin' || vehicle.user.toString() === req.user._id.toString()) {
+    // 🛡️ SECURITY CHECK: Only Owner or Admin can delete
+    const isOwner = vehicle.user.toString() === req.user._id.toString();
+    const isAdmin = req.user.role === 'admin';
+
+    if (isOwner || isAdmin) {
       await vehicle.deleteOne();
       res.json({ message: 'Vehicle removed successfully' });
     } else {
       res.status(401);
-      throw new Error('Not authorized to delete this vehicle');
+      throw new Error('Not authorized. You can only delete vehicles that you own.');
     }
   } else {
     res.status(404);
@@ -141,7 +152,7 @@ const deleteVehicle = asyncHandler(async (req, res) => {
 });
 
 /**
- * @desc    නව සමාලෝචනයක් (Review) එක් කිරීම
+ * @desc    Create new review
  * @route   POST /api/vehicles/:id/reviews
  * @access  Private
  */
@@ -169,7 +180,7 @@ const createVehicleReview = asyncHandler(async (req, res) => {
     vehicle.reviews.push(review);
     vehicle.numReviews = vehicle.reviews.length;
     
-    // සාමාන්‍ය රේටින්ග් එක ගණනය කිරීම
+    // Calculate Average Rating
     vehicle.rating =
       vehicle.reviews.reduce((acc, item) => item.rating + acc, 0) /
       vehicle.reviews.length;

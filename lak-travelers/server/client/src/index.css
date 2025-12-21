@@ -1,12 +1,66 @@
+/* ---------------------------------------------------
+   Fonts - Plus Jakarta Sans (Tourism UI සඳහා ඉතා උචිතයි)
+--------------------------------------------------- */
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
 
+/* ---------------------------------------------------
+   Tailwind Base Setup
+--------------------------------------------------- */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* ---------------------------------------------------
+   Google Translate Widget Cleanup (IMPORTANT)
+   මෙම කොටස මඟින් Google හි "කැත" dropdown එක සහ ලෝගෝ සඟවයි.
+--------------------------------------------------- */
+.goog-te-gadget span,
+.goog-te-gadget .goog-logo-link,
+.goog-te-banner-frame.skiptranslate,
+#goog-gt-tt,
+.goog-te-balloon-frame,
+.goog-te-gadget div,
+.skiptranslate iframe {
+    display: none !important;
+}
+
+.goog-te-gadget {
+    color: transparent !important;
+    font-size: 0 !important;
+}
+
+/* Page එක උඩින් ඇති වන හිස් ඉඩ (Gap) ඉවත් කිරීමට */
+body {
+    top: 0 !important;
+    position: static !important;
+}
+
+/* ---------------------------------------------------
+   Google Translate Dropdown Custom Styling
+   අපේ Custom Modal එක ඇතුළේ පෙන්වන පෙනුම මෙහිදී පාලනය වේ.
+--------------------------------------------------- */
+.goog-te-combo {
+    display: block !important;
+    width: 100% !important;
+    padding: 12px !important;
+    border-radius: 12px !important;
+    border: 1px solid #e2e8f0 !important;
+    background-color: #f8fafc !important;
+    font-family: 'Plus Jakarta Sans', sans-serif !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    color: #1e293b !important;
+    outline: none !important;
+    cursor: pointer !important;
+    /* සෆාරි සහ අනෙකුත් බ්‍රවුසර වල dropdown එක නිවැරදි කිරීමට */
+    -webkit-appearance: menulist !important;
+}
+
+/* ---------------------------------------------------
+   Global Base Styles
+--------------------------------------------------- */
 @layer base {
   html {
-    /* සුමටව Scroll වීම සඳහා */
     scroll-behavior: smooth;
   }
 
@@ -14,27 +68,17 @@
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    /* වඩාත් වෘත්තීය Font එකක් ලබා දීම */
     font-family: 'Plus Jakarta Sans', sans-serif;
-    background-color: #f8fafc; /* පිරිසිදු ලා අළු පාටක් */
-    color: #0f172a; /* Slate-900 පාට (ඇසට පහසුයි) */
+    background-color: #f8fafc; /* පද්ධතියේ පසුබිම් වර්ණය */
+    color: #0f172a;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 }
 
-/* 🌀 Global Transitions (සියලුම Buttons සහ Links වලට සුමට බවක් ලබා දෙයි) */
-a, button {
-  transition: all 0.2s ease-in-out;
-}
-
-/* 🖼️ Image Default Logic */
-img {
-  max-width: 100%;
-  height: auto;
-}
-
-/* 📑 Custom Scrollbar (වෙබ් අඩවියේ අලංකාරය සඳහා) */
+/* ---------------------------------------------------
+   Custom Scrollbar Styling
+--------------------------------------------------- */
 ::-webkit-scrollbar {
   width: 8px;
 }
@@ -52,11 +96,32 @@ img {
   background: #94a3b8;
 }
 
-/* ⚡ Fade-in Animation (පිටු Load වන විට පෙන්වන අලංකාරය) */
+/* ---------------------------------------------------
+   Global Transitions & Utility
+--------------------------------------------------- */
+a,
+button {
+  transition: all 0.2s ease-in-out;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* My Bookings Card Hover Effect */
+.booking-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+}
+
+/* ---------------------------------------------------
+   Animations
+--------------------------------------------------- */
 @keyframes fadeInUp {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(15px);
   }
   to {
     opacity: 1;
@@ -65,5 +130,14 @@ img {
 }
 
 .animate-fade-in-up {
-  animation: fadeInUp 0.6s ease-out forwards;
+  animation: fadeInUp 0.4s ease-out forwards;
+}
+
+/* ---------------------------------------------------
+   Navbar Backdrop Blur Fix
+--------------------------------------------------- */
+.navbar-glass {
+  background-color: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }

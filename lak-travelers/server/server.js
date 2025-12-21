@@ -2,15 +2,45 @@ import path from 'path';
 import express from 'express';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
-import app from './app.js'; 
+import cors from 'cors'; 
+import cookieParser from 'cookie-parser';
+
+// 1. Import all route files
+import userRoutes from './routes/userRoutes.js'; 
+import hotelRoutes from './routes/hotelRoutes.js';
+import tourRoutes from './routes/tourRoutes.js';
+import vehicleRoutes from './routes/vehicleRoutes.js';
+import bookingRoutes from './routes/bookingRoutes.js';
 import aiRoutes from './routes/aiRoutes.js';
-import userRoutes from './routes/userRoutes.js'; // 👈 User routes අමතක කරන්න එපා
+import uploadRoutes from './routes/uploadRoutes.js';
+
+
 import { notFound, errorHandler } from './middleware/errorMiddleware.js';
 
 dotenv.config();
 
+const app = express();
+
 /**
- * 🗄️ 1. Database Connection
+ * 🚀 Middleware Setup
+ */
+app.use(cors({
+  origin: 'http://localhost:5173', 
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  credentials: true, 
+  allowedHeaders: ["Content-Type", "Authorization"]
+}));
+
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(cookieParser());
+app.use('/api/upload', uploadRoutes);
+
+const __dirname = path.resolve();
+app.use('/uploads', express.static(path.join(__dirname, '/uploads')));
+
+/**
+ * 🗄️ Database Connection
  */
 const connectDB = async () => {
   try {
@@ -21,49 +51,33 @@ const connectDB = async () => {
     process.exit(1);
   }
 };
+connectDB();
 
 /**
- * 🚀 2. IMPORTANT: Global Middleware (Limit Setup)
- * මේ පේළි දෙක අනිවාර්යයෙන්ම Routes වලට ඉහළින් තිබිය යුතුය.
+ * 🤖 Route Registration (FIXES THE 404 ERRORS)
  */
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
-/**
- * 🤖 3. Routes Registration
- */
-app.use('/api/users', userRoutes); // 👈 User Profile/OTP/Register සියල්ල මෙහි ඇත
+app.use('/api/users', userRoutes); 
+app.use('/api/upload', uploadRoutes);
+app.use('/api/hotels', hotelRoutes);    // 👈 Added
+app.use('/api/tours', tourRoutes);      // 👈 Added
+app.use('/api/vehicles', vehicleRoutes); // 👈 Added
+app.use('/api/bookings', bookingRoutes); // 👈 Added
 app.use('/api/ai', aiRoutes);
 
-/**
- * 📦 4. Production Setup (Hosting)
- */
-const __dirname = path.resolve();
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, '/client/dist')));
-
-  app.get('*', (req, res) =>
-    res.sendFile(path.resolve(__dirname, 'client', 'dist', 'index.html'))
-  );
-} else {
-  app.get('/', (req, res) => {
-    res.send('API is running....');
-  });
-}
+// Root route
+app.get('/', (req, res) => {
+  res.send('Lak Travelers API is running locally....');
+});
 
 /**
- * 🚨 5. Final Error Handling Middleware
+ * 🚨 Error Handling
  */
 app.use(notFound);
 app.use(errorHandler);
 
-// Database සම්බන්ධ කිරීම
-connectDB();
-
-/**
- * 🚀 6. Start Server
- */
 const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => {
-  console.log(`Server started in ${process.env.NODE_ENV || 'development'} mode on port ${PORT} 🚀`);
+  console.log(`Server started on http://localhost:${PORT} 🚀`);
 });
+
+export default app;

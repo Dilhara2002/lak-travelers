@@ -2,12 +2,35 @@ import Groq from "groq-sdk";
 import Hotel from "../models/Hotel.js";
 import Tour from "../models/Tour.js";
 import Vehicle from "../models/Vehicle.js";
+import dotenv from "dotenv";
 
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+// .env file එක load කිරීම අනිවාර්ය වේ
+dotenv.config();
+
+/**
+ * 🛠️ Groq Instance එක හදන්නේ function එක ඇතුළේ හෝ 
+ * API Key එක තියෙනවාදැයි පරීක්ෂා කිරීමෙන් පසුවයි.
+ */
+const getGroqClient = () => {
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) {
+    console.error("❌ GROQ_API_KEY is missing in .env file!");
+    return null;
+  }
+  return new Groq({ apiKey });
+};
 
 export const chatWithAI = async (req, res) => {
   try {
     const { message, history } = req.body;
+
+    const groq = getGroqClient();
+    if (!groq) {
+      return res.status(500).json({ 
+        success: false, 
+        reply: "AI service configuration error. Please check API keys." 
+      });
+    }
 
     // 1. Database දත්ත ලබා ගැනීම (Context එක සඳහා)
     const [hotels, tours, vehicles] = await Promise.all([
@@ -16,6 +39,7 @@ export const chatWithAI = async (req, res) => {
       Vehicle.find({}).select("vehicleModel pricePerDay").limit(5)
     ]);
 
+    // History එක Format කිරීම
     const formattedHistory = (history || []).map(item => ({
       role: item.role === "model" ? "assistant" : item.role,
       content: Array.isArray(item.parts) ? item.parts[0].text : item.content || ""
@@ -48,9 +72,16 @@ export const chatWithAI = async (req, res) => {
       model: "llama-3.3-70b-versatile",
     });
 
-    res.status(200).json({ success: true, reply: chatCompletion.choices[0]?.message?.content });
+    res.status(200).json({ 
+      success: true, 
+      reply: chatCompletion.choices[0]?.message?.content || "No response from AI." 
+    });
 
   } catch (error) {
-    res.status(500).json({ success: false, reply: "Sorry, I'm having trouble planning right now." });
+    console.error("AI Controller Error:", error.message);
+    res.status(500).json({ 
+      success: false, 
+      reply: "Sorry, I'm having trouble planning right now. Please try again later." 
+    });
   }
 };

@@ -10,46 +10,57 @@ import {
   getPendingVendors,
   approveVendor,
   getAdminStats,
+  rejectVendor,
+  getUsers, // 👈 Added this
+  adminUpdateUser,
+  adminCreateUser,
+  adminDeleteUser,
 } from '../controllers/userController.js';
 import { protect, admin } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
 /**
- * 🔓 Public Routes (ඕනෑම අයෙකුට විවෘතයි)
+ * @section Public Routes
  */
-// පරිශීලක ලියාපදිංචිය (දැන් OTP සමඟ)
 router.post('/', registerUser); 
-
-// OTP කේතය ඊමේල් කිරීමට (Register සහ Update දෙකටම)
 router.post('/send-otp', sendOTP); 
-
-// ලොගින් සහ ලොග්අවුට්
 router.post('/auth', authUser);
 router.post('/logout', logoutUser);
 
-
 /**
- * 🔒 Protected Routes (ලොග් වූ අයට පමණයි)
+ * @section Protected Routes (Logged in users only)
  */
 router.route('/profile')
   .get(protect, getUserProfile)
-  .put(protect, updateUserProfile); // පින්තූරය සහ OTP මෙහිදී handle වේ
+  .put(protect, updateUserProfile);
 
-// Vendor කෙනෙකු වීමට ඉල්ලුම් කිරීම
 router.put('/vendor-profile', protect, updateVendorProfile);
 
+/**
+ * @section Admin Management Routes (Full CRUD for Admin)
+ */
+// Get all users for the management table
+router.get('/admin/all', protect, admin, getUsers); 
+
+// Create, Update, and Delete users manually
+router.post('/admin/create', protect, admin, adminCreateUser);
+router.put('/admin/update/:id', protect, admin, adminUpdateUser);
+router.delete('/admin/:id', protect, admin, adminDeleteUser);
 
 /**
- * 🛡️ Admin Routes (ඇඩ්මින්වරුන්ට පමණයි)
+ * @section Vendor Approval System
  */
-// අනුමැතිය අපේක්ෂිත වෙන්ඩර්වරු ලබා ගැනීම
+// Get vendors waiting for approval
 router.get('/pending', protect, admin, getPendingVendors);
 
-// Dashboard දත්ත (Stats) ලබා ගැනීම
-router.get('/admin-stats', protect, admin, getAdminStats);
-
-// වෙන්ඩර් කෙනෙකු අනුමත කිරීම
+// Approve or Reject vendor applications
 router.put('/approve/:id', protect, admin, approveVendor);
+router.delete('/reject/:id', protect, admin, rejectVendor);
+
+/**
+ * @section Dashboard Statistics
+ */
+router.get('/admin-stats', protect, admin, getAdminStats);
 
 export default router;

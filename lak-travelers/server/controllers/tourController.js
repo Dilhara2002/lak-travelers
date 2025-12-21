@@ -2,12 +2,11 @@ import asyncHandler from 'express-async-handler';
 import Tour from '../models/Tour.js';
 
 /**
- * @desc    Fetch all tours
+ * @desc    Fetch all tours with search functionality
  * @route   GET /api/tours
  * @access  Public
  */
 const getTours = asyncHandler(async (req, res) => {
-  // සෙවුම් පහසුකම් සඳහා keyword එකක් තිබේදැයි බලයි
   const keyword = req.query.keyword
     ? {
         name: {
@@ -17,7 +16,7 @@ const getTours = asyncHandler(async (req, res) => {
       }
     : {};
 
-  const tours = await Tour.find({ ...keyword }).populate('user', 'name email');
+  const tours = await Tour.find({ ...keyword }).populate('user', 'name email').sort({ createdAt: -1 });
   res.json(tours);
 });
 
@@ -43,7 +42,7 @@ const getTourById = asyncHandler(async (req, res) => {
  * @access  Private (Vendor / Admin)
  */
 const createTour = asyncHandler(async (req, res) => {
-  // 🔐 අනුමත වූ (Approved) Vendor කෙනෙක් දැයි පරීක්ෂා කිරීම
+  // Check if Vendor is approved before allowing creation
   if (req.user.role === 'vendor' && !req.user.isApproved) {
     res.status(403);
     throw new Error('Your vendor account is not approved yet');
@@ -59,21 +58,23 @@ const createTour = asyncHandler(async (req, res) => {
     image,
   } = req.body;
 
-  // 🛑 අත්‍යවශ්‍ය දත්ත තිබේදැයි පරීක්ෂා කිරීම
   if (!name || !description || !price || !duration || !destinations || !groupSize || !image) {
     res.status(400);
     throw new Error('Please fill all required fields');
   }
 
+  // Handle image if it comes as an object from Cloudinary upload
+  const finalImage = typeof image === 'object' ? image.image : image;
+
   const tour = new Tour({
-    user: req.user._id, // Auth middleware එකෙන් ලැබෙන ID එක
+    user: req.user._id,
     name,
     description,
     price,
     duration,
     destinations,
     groupSize,
-    image,
+    image: finalImage,
   });
 
   const createdTour = await tour.save();
@@ -83,17 +84,20 @@ const createTour = asyncHandler(async (req, res) => {
 /**
  * @desc    Update a tour
  * @route   PUT /api/tours/:id
- * @access  Private (Vendor/Admin)
+ * @access  Private (Owner / Admin)
  */
 const updateTour = asyncHandler(async (req, res) => {
   const { name, description, destinations, duration, price, groupSize, image } = req.body;
   const tour = await Tour.findById(req.params.id);
 
   if (tour) {
-    // 🔐 ආරක්ෂක පියවර: අයිතිකරුට හෝ ඇඩ්මින්ට පමණක් අවසරය
-    if (req.user.role !== 'admin' && tour.user.toString() !== req.user._id.toString()) {
+    // 🛡️ SECURITY CHECK: Is the logged-in user the owner or an admin?
+    const isOwner = tour.user.toString() === req.user._id.toString();
+    const isAdmin = req.user.role === 'admin';
+
+    if (!isOwner && !isAdmin) {
       res.status(401);
-      throw new Error('Not authorized to update this tour');
+      throw new Error('Not authorized. You can only update tours that you own.');
     }
 
     tour.name = name || tour.name;
@@ -102,7 +106,11 @@ const updateTour = asyncHandler(async (req, res) => {
     tour.duration = duration || tour.duration;
     tour.price = price || tour.price;
     tour.groupSize = groupSize || tour.groupSize;
-    tour.image = image || tour.image;
+    
+    // Ensure image is handled as string URL
+    if (image) {
+      tour.image = typeof image === 'object' ? image.image : image;
+    }
 
     const updatedTour = await tour.save();
     res.json(updatedTour);
@@ -115,19 +123,22 @@ const updateTour = asyncHandler(async (req, res) => {
 /**
  * @desc    Delete a tour
  * @route   DELETE /api/tours/:id
- * @access  Private (Admin or Owner)
+ * @access  Private (Owner / Admin)
  */
 const deleteTour = asyncHandler(async (req, res) => {
   const tour = await Tour.findById(req.params.id);
 
   if (tour) {
-    // 🔐 Admin OR Owner can delete
-    if (req.user.role === 'admin' || tour.user.toString() === req.user._id.toString()) {
+    // 🛡️ SECURITY CHECK: Only Admin or the specific Owner can delete
+    const isOwner = tour.user.toString() === req.user._id.toString();
+    const isAdmin = req.user.role === 'admin';
+
+    if (isOwner || isAdmin) {
       await tour.deleteOne();
       res.json({ message: 'Tour removed successfully' });
     } else {
       res.status(401);
-      throw new Error('Not authorized to delete this tour');
+      throw new Error('Not authorized. You can only delete tours that you own.');
     }
   } else {
     res.status(404);
@@ -165,7 +176,7 @@ const createTourReview = asyncHandler(async (req, res) => {
     tour.reviews.push(review);
     tour.numReviews = tour.reviews.length;
     
-    // සාමාන්‍ය රේටින්ග් එක ගණනය කිරීම
+    // Calculate Average Rating
     tour.rating =
       tour.reviews.reduce((acc, item) => item.rating + acc, 0) /
       tour.reviews.length;

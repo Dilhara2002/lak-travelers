@@ -2,15 +2,14 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import API from "../services/api";
 import logoImage from "../assets/logo.png"; 
+import LanguageSwitcher from "./LanguageSwitcher";
 
 const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   
-  // LocalStorage එකෙන් User තොරතුරු ලබා ගැනීම
   const [user, setUser] = useState(JSON.parse(localStorage.getItem("userInfo")));
 
-  // පිටුව මාරු වන සෑම අවස්ථාවකම හෝ localStorage වෙනස් වන විට දත්ත අලුත් කරයි
   useEffect(() => {
     const handleStorageChange = () => {
       setUser(JSON.parse(localStorage.getItem("userInfo")));
@@ -18,7 +17,6 @@ const Navbar = () => {
 
     handleStorageChange();
     
-    // UserProfile එකෙන් එවන storage event එකට සවන් දීම
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
   }, [location]);
@@ -71,7 +69,7 @@ const Navbar = () => {
         </Link>
 
         {/* NAVIGATION LINKS */}
-        <div className="hidden md:flex items-center space-x-10 ml-auto mr-12">
+        <div className="hidden md:flex items-center space-x-10 ml-auto mr-8">
           {["Home", "Hotels", "Tours", "Vehicles"].map((item) => {
             const path = item === "Home" ? "/" : `/${item.toLowerCase()}`;
             const isActive = location.pathname === path;
@@ -95,15 +93,20 @@ const Navbar = () => {
           })}
         </div>
 
-        {/* AUTH SECTION */}
-        <div className="flex items-center gap-3">
+        {/* LANGUAGE SWITCHER & AUTH SECTION */}
+        <div className="flex items-center gap-4">
+          
+          {/* ✅ LANGUAGE SWITCHER ADDED HERE */}
+          <div className="hidden lg:block">
+            <LanguageSwitcher />
+          </div>
+
           {user ? (
             <div className="relative">
               <button
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                 className="flex items-center gap-2 rounded-full p-1 pr-3 bg-gray-50 border border-gray-200 hover:bg-white hover:shadow-md transition duration-200 focus:outline-none"
               >
-                {/* ✅ යාවත්කාලීන කළ පින්තූර කොටස */}
                 <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-600 overflow-hidden shadow-sm">
                   {user.profileImage ? (
                     <img 
@@ -174,6 +177,12 @@ const Navbar = () => {
       {isMobileMenuOpen && (
         <div className="md:hidden border-t border-gray-100 bg-white px-4 pt-4 pb-6 shadow-lg">
           <div className="flex flex-col space-y-4">
+            
+            {/* ✅ MOBILE LANGUAGE SWITCHER */}
+            <div className="px-4 py-2">
+               <LanguageSwitcher />
+            </div>
+
             {["Home", "Hotels", "Tours", "Vehicles"].map((item) => (
               <Link key={item} to={item === "Home" ? "/" : `/${item.toLowerCase()}`} onClick={closeDropdown} className="text-lg font-bold px-4 py-2 rounded-lg text-gray-600 hover:bg-gray-50">{item}</Link>
             ))}

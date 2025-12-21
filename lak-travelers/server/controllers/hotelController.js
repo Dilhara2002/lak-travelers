@@ -2,7 +2,7 @@ import asyncHandler from 'express-async-handler';
 import Hotel from '../models/Hotel.js';
 
 /**
- * @desc    සියලුම හෝටල් ලබා ගැනීම (සෙවුම් පහසුකම සහිතව)
+ * @desc    Fetch all hotels (with search functionality)
  * @route   GET /api/hotels
  * @access  Public
  */
@@ -21,7 +21,7 @@ const getHotels = asyncHandler(async (req, res) => {
 });
 
 /**
- * @desc    අලුත් හෝටලයක් ඇතුළත් කිරීම
+ * @desc    Create a new hotel
  * @route   POST /api/hotels
  * @access  Private (Vendor/Admin)
  */
@@ -33,16 +33,16 @@ const createHotel = asyncHandler(async (req, res) => {
     throw new Error('Please fill all fields');
   }
 
-  // ✅ FIX: Image එක Object එකක් ලෙස ලැබෙන්නේ නම් එහි URL එක පමණක් ලබා ගැනීම
+  // Handle image if it comes as an object from Cloudinary upload
   const finalImage = typeof image === 'object' ? image.image : image;
 
   const hotel = new Hotel({
-    user: req.user._id,
+    user: req.user._id, // Assign the logged-in user as the owner
     name,
     location,
     description,
     pricePerNight,
-    image: finalImage, // String URL එක පමණක් Database එකට යයි
+    image: finalImage,
     mapUrl,
   });
 
@@ -51,7 +51,7 @@ const createHotel = asyncHandler(async (req, res) => {
 });
 
 /**
- * @desc    ID එක අනුව හෝටලයක් ලබා ගැනීම
+ * @desc    Get hotel by ID
  * @route   GET /api/hotels/:id
  * @access  Public
  */
@@ -67,17 +67,21 @@ const getHotelById = asyncHandler(async (req, res) => {
 });
 
 /**
- * @desc    හෝටල් දත්ත යාවත්කාලීන කිරීම
+ * @desc    Update hotel details
  * @route   PUT /api/hotels/:id
- * @access  Private (Vendor/Admin)
+ * @access  Private (Owner/Admin)
  */
 const updateHotel = asyncHandler(async (req, res) => {
   const hotel = await Hotel.findById(req.params.id);
 
   if (hotel) {
-    if (hotel.user.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+    // 🛡️ SECURITY CHECK: Is the logged-in user the owner or an admin?
+    const isOwner = hotel.user.toString() === req.user._id.toString();
+    const isAdmin = req.user.role === 'admin';
+
+    if (!isOwner && !isAdmin) {
       res.status(401);
-      throw new Error('Not authorized to update this hotel');
+      throw new Error('Not authorized. You can only edit your own listings.');
     }
 
     hotel.name = req.body.name || hotel.name;
@@ -85,7 +89,6 @@ const updateHotel = asyncHandler(async (req, res) => {
     hotel.description = req.body.description || hotel.description;
     hotel.pricePerNight = req.body.pricePerNight || hotel.pricePerNight;
     
-    // ✅ FIX: මෙහිදීද Image එක String එකක් බව තහවුරු කරයි
     if (req.body.image) {
       hotel.image = typeof req.body.image === 'object' ? req.body.image.image : req.body.image;
     }
@@ -101,19 +104,25 @@ const updateHotel = asyncHandler(async (req, res) => {
 });
 
 /**
- * @desc    හෝටලයක් මකා දැමීම
+ * @desc    Delete a hotel
+ * @route   DELETE /api/hotels/:id
+ * @access  Private (Owner/Admin)
  */
 const deleteHotel = asyncHandler(async (req, res) => {
   const hotel = await Hotel.findById(req.params.id);
 
   if (hotel) {
-    if (req.user.role === 'admin' || hotel.user.toString() === req.user._id.toString()) {
-      await hotel.deleteOne();
-      res.json({ message: 'Hotel removed successfully' });
-    } else {
+    // 🛡️ SECURITY CHECK: Is the logged-in user the owner or an admin?
+    const isOwner = hotel.user.toString() === req.user._id.toString();
+    const isAdmin = req.user.role === 'admin';
+
+    if (!isOwner && !isAdmin) {
       res.status(401);
-      throw new Error('Not authorized to delete this hotel');
+      throw new Error('Not authorized. You can only delete your own listings.');
     }
+
+    await hotel.deleteOne();
+    res.json({ message: 'Hotel removed successfully' });
   } else {
     res.status(404);
     throw new Error('Hotel not found');
@@ -121,7 +130,7 @@ const deleteHotel = asyncHandler(async (req, res) => {
 });
 
 /**
- * @desc    නව සමාලෝචනයක් (Review) එක් කිරීම
+ * @desc    Create a new review
  * @route   POST /api/hotels/:id/reviews
  * @access  Private
  */
@@ -150,7 +159,7 @@ const createHotelReview = asyncHandler(async (req, res) => {
     hotel.reviews.push(review);
     hotel.numReviews = hotel.reviews.length;
 
-    // සාමාන්‍ය රේටින්ග් එක ගණනය කිරීම
+    // Calculate Average Rating
     hotel.rating =
       hotel.reviews.reduce((acc, item) => item.rating + acc, 0) /
       hotel.reviews.length;

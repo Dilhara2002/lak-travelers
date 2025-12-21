@@ -6,14 +6,16 @@ const bookingSchema = mongoose.Schema(
     hotel: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel' },
     tour: { type: mongoose.Schema.Types.ObjectId, ref: 'Tour' },
     vehicle: { type: mongoose.Schema.Types.ObjectId, ref: 'Vehicle' },
-    checkInDate: { type: Date },
-    checkOutDate: { type: Date },
+    checkInDate: { type: String }, // Changed to String for easier Frontend display
+    checkOutDate: { type: String },
+    tourDate: { type: String },
+    pickupDate: { type: String },
     totalPrice: { type: Number, required: true },
     status: {
       type: String,
       required: true,
-      enum: ['Pending', 'Confirmed', 'Rejected', 'Cancelled'],
-      default: 'Pending',
+      enum: ['pending', 'confirmed', 'rejected', 'cancelled'], // Lowercase to match Frontend
+      default: 'pending',
     },
     vendorFeedback: {
       problem: { type: String, default: "" },
@@ -23,9 +25,5 @@ const bookingSchema = mongoose.Schema(
   { timestamps: true }
 );
 
-
-
-// models/hotel.js ඇතුළත අවසාන පේළිය මෙලෙස වෙනස් කරන්න
 const Booking = mongoose.models.Booking || mongoose.model("Booking", bookingSchema);
 export default Booking;
-

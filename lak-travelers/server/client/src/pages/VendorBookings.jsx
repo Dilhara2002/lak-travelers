@@ -29,22 +29,19 @@ const VendorBookings = () => {
     fetchMyBookings();
   }, []);
 
-  const handleUpdateStatus = async (e) => {
-    e.preventDefault();
-    try {
-      await API.put(`/bookings/${actionModal.booking._id}/status`, {
-        status: actionModal.status,
-        message: actionModal.message,
-        problem: actionModal.problem,
-        solution: actionModal.solution
-      });
-      alert(`Booking ${actionModal.status} Successfully! ✅`);
-      setActionModal({ show: false, booking: null, status: "", message: "", problem: "", solution: "" });
-      fetchMyBookings();
-    } catch (err) {
-      alert("Error updating status.");
-    }
-  };
+  const handleStatusUpdate = async (bookingId, newStatus) => {
+  try {
+    // 1. Send update to backend
+    await API.put(`/bookings/${bookingId}/status`, { status: newStatus });
+    
+    // 2. CRITICAL: Refresh the list so the UI updates immediately
+    fetchMyVendorBookings(); 
+    
+    alert(`Booking ${newStatus} successfully!`);
+  } catch (err) {
+    alert("Failed to update status");
+  }
+};
 
   if (loading) return <div className="text-center mt-20 font-bold animate-pulse text-indigo-600">Loading Vendor Bookings...</div>;
 

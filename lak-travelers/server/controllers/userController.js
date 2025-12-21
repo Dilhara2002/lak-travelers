@@ -1,27 +1,25 @@
 import asyncHandler from 'express-async-handler';
 import User from '../models/User.js';
+import Booking from '../models/Booking.js';
+import Hotel from '../models/Hotel.js';
+import Tour from '../models/Tour.js';
+import Vehicle from '../models/Vehicle.js';
 import generateToken from '../utils/generateToken.js';
 import nodemailer from 'nodemailer';
 
-// OTP තාවකාලිකව තබා ගැනීමට (Production වලදී Redis වැනි දෙයක් වඩා හොඳයි)
-let otpStore = {}; 
+// Temporary store for OTP (consider using Redis for production)
+let otpStore = {};
 
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
-
-/// @desc    Send OTP to Email
-// @route   POST /api/users/send-otp
+/**
+ * @desc    Send OTP to Email
+ * @route   POST /api/users/send-otp
+ * @access  Public
+ */
 export const sendOTP = asyncHandler(async (req, res) => {
-  const { email, isUpdate } = req.body; // isUpdate කියන එක frontend එකෙන් එවමු
+  const { email, isUpdate } = req.body;
 
   const userExists = await User.findOne({ email });
 
-  // 🚨 Register වෙද්දී නම් (isUpdate නැති වෙලාවට) user ඉන්නවා නම් error එකක් දෙන්න
   if (!isUpdate && userExists) {
     res.status(400);
     throw new Error('User already exists');
@@ -35,8 +33,10 @@ export const sendOTP = asyncHandler(async (req, res) => {
     },
   });
 
+  // Make sure you are NOT filtering out confirmed bookings
+const bookingsCount = await Booking.countDocuments({ status: { $ne: 'cancelled' } });
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  otpStore[email] = { otp, expires: Date.now() + 600000 };
+  otpStore[email] = { otp, expires: Date.now() + 600000 }; // 10 min expiry
 
   const mailOptions = {
     from: `"Lak Travelers" <${process.env.EMAIL_USER}>`,
@@ -49,17 +49,22 @@ export const sendOTP = asyncHandler(async (req, res) => {
   res.status(200).json({ message: 'OTP sent successfully!' });
 });
 
-// @desc    Verify OTP and Register user
-// @route   POST /api/users/verify-register
+/**
+ * @desc    Verify OTP and register user
+ * @route   POST /api/users
+ * @access  Public
+ */
 export const registerUser = asyncHandler(async (req, res) => {
   const { name, email, password, role, otp } = req.body;
 
-  if (!otpStore[email] || otpStore[email].otp !== otp) {
+  const otpData = otpStore[email];
+
+  if (!otpData || otpData.otp !== otp) {
     res.status(400);
     throw new Error('Invalid or expired OTP');
   }
 
-  if (Date.now() > otpStore[email].expires) {
+  if (Date.now() > otpData.expires) {
     delete otpStore[email];
     res.status(400);
     throw new Error('OTP expired');
@@ -74,8 +79,9 @@ export const registerUser = asyncHandler(async (req, res) => {
   });
 
   if (user) {
-    delete otpStore[email]; // සාර්ථක නම් OTP එක මකන්න
+    delete otpStore[email];
     generateToken(res, user._id);
+
     res.status(201).json({
       _id: user._id,
       name: user.name,
@@ -89,43 +95,203 @@ export const registerUser = asyncHandler(async (req, res) => {
   }
 });
 
-// --- ඉතිරි Controllers (authUser, logoutUser, Profile updates ආදිය) කලින් විදිහටම තියන්න ---
+/**
+ * @desc    Authenticate user & get token
+ * @route   POST /api/users/auth
+ * @access  Public
+ */
 export const authUser = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
+
   const user = await User.findOne({ email });
+
   if (user && (await user.matchPassword(password))) {
     generateToken(res, user._id);
-    res.json({ _id: user._id, name: user.name, email: user.email, role: user.role, isApproved: user.isApproved });
+    res.json({
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      isApproved: user.isApproved,
+    });
   } else {
     res.status(401);
     throw new Error('Invalid email or password');
   }
 });
 
+/**
+ * @desc    Logout user / clear cookie
+ * @route   POST /api/users/logout
+ * @access  Public
+ */
 export const logoutUser = (req, res) => {
   res.cookie('jwt', '', { httpOnly: true, expires: new Date(0) });
   res.status(200).json({ message: 'Logged out successfully' });
 };
 
+/**
+ * @desc    Get user profile
+ * @route   GET /api/users/profile
+ * @access  Private
+ */
 export const getUserProfile = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id).select('-password');
-  user ? res.json(user) : (res.status(404), (() => { throw new Error('User not found') })());
+  if (user) {
+    res.json(user);
+  } else {
+    res.status(404);
+    throw new Error('User not found');
+  }
 });
 
-// @desc    Update user profile
-// @route   PUT /api/users/profile
-// server/controllers/userController.js
-
+/**
+ * @desc    Update user profile
+ * @route   PUT /api/users/profile
+ * @access  Private
+ */
 export const updateUserProfile = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id);
+
+  if (!user) {
+    res.status(404);
+    throw new Error('User not found');
+  }
+
+  user.name = req.body.name || user.name;
+  user.email = req.body.email || user.email;
+  if (req.body.profileImage) user.profileImage = req.body.profileImage;
+  if (req.body.password) user.password = req.body.password;
+
+  const updatedUser = await user.save();
+
+  res.json({
+    _id: updatedUser._id,
+    name: updatedUser.name,
+    email: updatedUser.email,
+    role: updatedUser.role,
+    profileImage: updatedUser.profileImage,
+  });
+});
+
+/**
+ * @desc    Apply to be a Vendor
+ * @route   PUT /api/users/vendor-profile
+ * @access  Private
+ */
+export const updateVendorProfile = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id);
+  if (!user) { 
+    res.status(404); 
+    throw new Error('User not found'); 
+  }
+
+  user.vendorDetails = { ...user.vendorDetails, ...req.body };
+  user.isApproved = false;
+  user.role = 'vendor';
+
+  const updatedUser = await user.save();
+  res.status(200).json(updatedUser);
+});
+
+/**
+ * @desc    Get all pending vendors
+ * @route   GET /api/users/pending
+ * @access  Private/Admin
+ */
+export const getPendingVendors = asyncHandler(async (req, res) => {
+  const vendors = await User.find({ role: 'vendor', isApproved: false })
+    .select('-password'); // includes vendorDetails, profileImage, etc.
+  res.json(vendors);
+});
+
+/**
+ * @desc    Approve a vendor
+ * @route   PUT /api/users/approve/:id
+ * @access  Private/Admin
+ */
+export const approveVendor = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.params.id);
+
+  if (!user) {
+    res.status(404);
+    throw new Error('User not found');
+  }
+
+  user.isApproved = true;
+  await user.save();
+  res.json({ message: 'Vendor approved successfully' });
+});
+
+/**
+ * @desc    Reject and delete vendor request
+ * @route   DELETE /api/users/reject/:id
+ * @access  Private/Admin
+ */
+/**
+ * @desc    Reject and delete vendor request
+ * @route   DELETE /api/users/reject/:id
+ * @access  Private/Admin
+ */
+export const rejectVendor = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.params.id);
+
+  if (user && user.role === 'vendor') {
+    // Optional: send email notification about rejection here
+    await User.findByIdAndDelete(req.params.id);
+    res.json({ message: 'Vendor request rejected and account removed' });
+  } else {
+    res.status(404);
+    throw new Error('Vendor not found');
+  }
+});
+/**
+ * @desc    Admin manually creates a User or Vendor
+ * @route   POST /api/users/admin/create
+ * @access  Private/Admin
+ */
+export const adminCreateUser = asyncHandler(async (req, res) => {
+  const { name, email, password, role, isApproved } = req.body;
+
+  const userExists = await User.findOne({ email });
+  if (userExists) {
+    res.status(400);
+    throw new Error('User already exists with this email');
+  }
+
+  const user = await User.create({
+    name,
+    email,
+    password, // This will be hashed by the User model middleware
+    role: role || 'user',
+    isApproved: isApproved !== undefined ? isApproved : true,
+  });
+
+  if (user) {
+    res.status(201).json(user);
+  } else {
+    res.status(400);
+    throw new Error('Invalid user data');
+  }
+});
+
+/**
+ * @desc    Admin updates any User or Vendor details
+ * @route   PUT /api/users/admin/update/:id
+ * @access  Private/Admin
+ */
+export const adminUpdateUser = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.params.id);
 
   if (user) {
     user.name = req.body.name || user.name;
     user.email = req.body.email || user.email;
-    
-    // ✅ පින්තූරය මෙතැනදී update වෙනවා
-    if (req.body.profileImage) {
-      user.profileImage = req.body.profileImage;
+    user.role = req.body.role || user.role;
+    user.isApproved = req.body.isApproved !== undefined ? req.body.isApproved : user.isApproved;
+
+    // If updating vendor details manually
+    if (req.body.vendorDetails) {
+      user.vendorDetails = { ...user.vendorDetails, ...req.body.vendorDetails };
     }
 
     if (req.body.password) {
@@ -133,49 +299,68 @@ export const updateUserProfile = asyncHandler(async (req, res) => {
     }
 
     const updatedUser = await user.save();
-
-    // 🚀 ඉතාම වැදගත්: මෙන්න මෙතනට profileImage එක දාන්න
-    res.json({
-      _id: updatedUser._id,
-      name: updatedUser.name,
-      email: updatedUser.email,
-      role: updatedUser.role,
-      profileImage: updatedUser.profileImage, // 👈 මේ පේළිය අනිවාර්යයි
-    });
+    res.json(updatedUser);
   } else {
     res.status(404);
     throw new Error('User not found');
   }
 });
-export const updateVendorProfile = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.user._id);
-  if (!user) { res.status(404); throw new Error('User not found'); }
-  user.vendorDetails = { ...user.vendorDetails, ...req.body };
-  user.isApproved = false;
-  user.role = 'vendor';
-  const updatedUser = await user.save();
-  res.status(200).json(updatedUser);
-});
 
-export const getPendingVendors = asyncHandler(async (req, res) => {
-  const vendors = await User.find({ role: 'vendor', isApproved: false }).select('-password');
-  res.json(vendors || []);
-});
-
-export const approveVendor = asyncHandler(async (req, res) => {
+/**
+ * @desc    Admin deletes any User or Vendor
+ * @route   DELETE /api/users/admin/:id
+ * @access  Private/Admin
+ */
+export const adminDeleteUser = asyncHandler(async (req, res) => {
   const user = await User.findById(req.params.id);
   if (user) {
-    user.isApproved = true;
-    await user.save();
-    res.json({ message: 'Vendor approved successfully' });
+    if (user.role === 'admin') {
+      res.status(400);
+      throw new Error('Cannot delete an admin user');
+    }
+    await User.findByIdAndDelete(req.params.id);
+    res.json({ message: 'User deleted successfully' });
   } else {
     res.status(404);
     throw new Error('User not found');
   }
 });
 
+// Add this at the bottom of userController.js
+
+/**
+ * @desc    Get all users for Admin
+ * @route   GET /api/users/admin/all
+ * @access  Private/Admin
+ */
+export const getUsers = asyncHandler(async (req, res) => {
+  const users = await User.find({}).select('-password');
+  res.json(users);
+});
+
+/**
+ * @desc    Get system-wide statistics for dashboard
+ * @route   GET /api/users/admin-stats
+ * @access  Private/Admin
+ */
 export const getAdminStats = asyncHandler(async (req, res) => {
   const usersCount = await User.countDocuments({ role: 'user' });
   const vendorsCount = await User.countDocuments({ role: 'vendor' });
-  res.json({ usersCount, vendorsCount, bookingsCount: 0, hotelsCount: 0, toursCount: 0, vehiclesCount: 0, totalRevenue: 0 });
+  const hotelsCount = await Hotel.countDocuments();
+  const toursCount = await Tour.countDocuments();
+  const vehiclesCount = await Vehicle.countDocuments();
+  const bookingsCount = await Booking.countDocuments({ status: { $ne: 'cancelled' } });
+
+  const confirmedBookings = await Booking.find({ status: 'confirmed' });
+  const totalRevenue = confirmedBookings.reduce((acc, item) => acc + (item.totalPrice || 0), 0);
+
+  res.json({
+    usersCount,
+    vendorsCount,
+    bookingsCount,
+    hotelsCount,
+    toursCount,
+    vehiclesCount,
+    totalRevenue,
+  });
 });

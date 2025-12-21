@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import API from '../services/api'; // අපි සාදාගත් API instance එක
+import API from '../services/api'; 
+import { toast } from 'react-toastify'; // Toast පාවිච්චි කිරීම වඩාත් වෘත්තීය මට්ටමක පවතී
 
 const HotelDetails = () => {
   const { id } = useParams();
@@ -40,12 +41,29 @@ const HotelDetails = () => {
   }, [id]);
 
   /**
+   * 💰 මුළු මුදල සහ දින ගණන ගණනය කිරීම (Memoized for performance)
+   */
+  const { totalNights, calculatedPrice } = useMemo(() => {
+    if (!checkIn || !checkOut || !hotel) return { totalNights: 0, calculatedPrice: 0 };
+    
+    const start = new Date(checkIn);
+    const end = new Date(checkOut);
+    const differenceInTime = end.getTime() - start.getTime();
+    const nights = Math.ceil(differenceInTime / (1000 * 3600 * 24));
+    
+    return {
+      totalNights: nights > 0 ? nights : 0,
+      calculatedPrice: nights > 0 ? nights * hotel.pricePerNight : 0
+    };
+  }, [checkIn, checkOut, hotel]);
+
+  /**
    * පින්තූර URL එක සකසන Helper Function එක
    */
   const getImageUrl = (imagePath) => {
     if (!imagePath) return "https://via.placeholder.com/800x400?text=No+Image+Available";
     if (imagePath.startsWith("http")) return imagePath;
-    const backendURL = "https://lak-travelers-api.vercel.app"; // ඔබේ Vercel Backend URL එක
+    const backendURL = "https://lak-travelers-api.vercel.app"; 
     const cleanPath = imagePath.startsWith("/") ? imagePath : `/${imagePath}`;
     return `${backendURL}${cleanPath}`;
   };
@@ -55,13 +73,19 @@ const HotelDetails = () => {
    */
   const handleBooking = async (e) => {
     e.preventDefault();
+
+    if (totalNights <= 0) {
+      alert("Check-out date must be after Check-in date! ⚠️");
+      return;
+    }
+
     try {
       await API.post('/bookings', { 
         bookingType: 'hotel', 
         hotelId: id, 
         checkInDate: checkIn, 
         checkOutDate: checkOut,
-        totalPrice: calculatedPrice
+        totalPrice: calculatedPrice // ✅ දැන් මෙය define කර ඇත
       });
       alert("Booking Successful! 🎉");
       navigate('/my-bookings');
@@ -99,7 +123,6 @@ const HotelDetails = () => {
     setUploading(true);
 
     try {
-      // ⚠️ API භාවිතා කිරීමෙන් CORS සහ 401 දෝෂ මගහැරේ
       const { data } = await API.post('/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
@@ -318,6 +341,22 @@ const HotelDetails = () => {
                   </div>
                 </div>
               </div>
+
+              {/* Price Calculation Display */}
+              {totalNights > 0 && (
+                <div className="bg-blue-50 p-4 rounded-xl space-y-2 border border-blue-100 animate-in fade-in duration-300">
+                   <div className="flex justify-between text-sm text-gray-600 italic">
+                     <span>Rs {hotel.pricePerNight.toLocaleString()} x {totalNights} nights</span>
+                     <span>Rs {calculatedPrice.toLocaleString()}</span>
+                   </div>
+                   <div className="h-px bg-blue-200"></div>
+                   <div className="flex justify-between font-extrabold text-gray-900">
+                     <span>Total</span>
+                     <span>Rs {calculatedPrice.toLocaleString()}</span>
+                   </div>
+                </div>
+              )}
+
               <button type="submit" className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-blue-700 transition shadow-lg active:scale-95">Reserve Now</button>
               <p className="text-center text-xs text-gray-400 mt-2">No payment required now</p>
             </form>

@@ -8,16 +8,21 @@ import User from '../models/User.js';
 const protect = asyncHandler(async (req, res, next) => {
   let token;
 
-  // 1. Cookie එකෙන් ටෝකන් එක ලබා ගැනීම
-  // GenerateToken එකේදී භාවිතා කළ 'jwt' යන නමම මෙහිදී භාවිතා කළ යුතුය
-  token = req.cookies.jwt; 
+  // 1. මුලින්ම Cookies වල 'jwt' තියෙනවාද බලන්න (Safe access using optional chaining)
+  token = req.cookies?.jwt;
+
+  // 2. Cookies වල නැත්නම් Authorization Header එක බලන්න (Bearer Token)
+  // මෙය Axios මගින් localStorage එකේ ඇති token එක එවන විට ප්‍රයෝජනවත් වේ.
+  if (!token && req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+    token = req.headers.authorization.split(' ')[1];
+  }
 
   if (token) {
     try {
-      // 2. ටෝකන් එක Verify කිරීම
+      // ටෝකන් එක Verify කිරීම
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       
-      // 3. පරිශීලකයා සොයා req.user වෙත ඇතුළත් කිරීම (Password රහිතව)
+      // පරිශීලකයා සොයා req.user වෙත ඇතුළත් කිරීම
       req.user = await User.findById(decoded.userId).select('-password');
       
       if (!req.user) {
@@ -25,16 +30,15 @@ const protect = asyncHandler(async (req, res, next) => {
         throw new Error('Not authorized, user not found');
       }
 
-      next(); // සාර්ථක නම් ඊළඟ පියවරට (Controller එකට) යවයි
+      next(); 
     } catch (error) {
       console.error("Auth Error:", error.message);
       res.status(401);
       throw new Error('Not authorized, token failed');
     }
   } else {
-    // ටෝකන් එක නොමැති විට 401 error එක ලබා දෙයි
     res.status(401);
-    throw new Error('Not authorized, no token');
+    throw new Error('Not authorized, no token found');
   }
 });
 
@@ -45,25 +49,23 @@ const admin = asyncHandler(async (req, res, next) => {
   if (req.user && req.user.role === 'admin') {
     next();
   } else {
-    res.status(401);
+    res.status(403); // Forbidden
     throw new Error('Not authorized as an admin');
   }
 });
 
 /**
  * @desc    අනුමත වූ (Approved) Vendor කෙනෙක් දැයි පරීක්ෂා කිරීම
- * @info    Vendor කෙනෙකුට වාහන/හෝටල් එකතු කිරීමට මෙය අත්‍යවශ්‍ය වේ.
  */
 const vendor = asyncHandler(async (req, res, next) => {
   if (req.user && (req.user.role === 'vendor' || req.user.role === 'admin')) {
-    // Vendor කෙනෙක් නම් අනිවාර්යයෙන්ම අනුමත වී තිබිය යුතුය
     if (req.user.role === 'vendor' && !req.user.isApproved) {
       res.status(403);
       throw new Error('Vendor account not approved by admin yet');
     }
     next();
   } else {
-    res.status(401);
+    res.status(403);
     throw new Error('Not authorized as a vendor');
   }
 });
