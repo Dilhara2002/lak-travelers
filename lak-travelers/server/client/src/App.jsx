@@ -4,6 +4,8 @@ import Footer from "./components/Footer";
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
+import { CurrencyProvider } from './context/CurrencyContext';
+
 // Pages Import
 import Home from "./pages/Home";
 import Login from "./pages/Login";
@@ -23,6 +25,7 @@ import EditTour from "./pages/EditTour";
 import VehicleList from "./pages/VehicleList";
 import VehicleDetails from "./pages/VehicleDetails";
 import AddVehicle from "./pages/AddVehicle";
+import SmartPlanner from "./pages/SmartPlanner"; // 🚀 AI Planner පිටුව මෙහිදී Import කර ඇත
 
 import LegalPolicy from "./pages/LegalPolicy";
 import AboutUs from "./pages/AboutUs";
@@ -40,50 +43,56 @@ const ProtectedRoute = ({ children }) => {
 
 function App() {
   return (
-    <Router>
-      <ToastContainer position="top-center" autoClose={2000} />
-      
-      <div className="font-sans bg-gray-50 text-gray-900 min-h-screen flex flex-col relative">
-        <Navbar />
+    <CurrencyProvider>
+      <Router>
+        <ToastContainer position="top-center" autoClose={2000} />
         
-        <main className="pt-24 flex-grow px-4 md:px-0">
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/hotels" element={<HotelList />} />
-            <Route path="/hotels/:id" element={<HotelDetails />} />
-            <Route path="/tours" element={<TourList />} />
-            <Route path="/tours/:id" element={<TourDetails />} />
-            <Route path="/vehicles" element={<VehicleList />} />
-            <Route path="/vehicles/:id" element={<VehicleDetails />} />
+        <div className="font-sans bg-gray-50 text-gray-900 min-h-screen flex flex-col relative">
+          <Navbar />
+          
+          <main className="pt-24 flex-grow px-4 md:px-0">
+            <Routes>
+              {/* Public Routes */}
+              <Route path="/" element={<Home />} />
+              <Route path="/smart-planner" element={<SmartPlanner />} /> {/* 🗺️ AI GraphRAG Planner Route */}
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/hotels" element={<HotelList />} />
+              <Route path="/hotels/:id" element={<HotelDetails />} />
+              <Route path="/tours" element={<TourList />} />
+              <Route path="/tours/:id" element={<TourDetails />} />
+              <Route path="/vehicles" element={<VehicleList />} />
+              <Route path="/vehicles/:id" element={<VehicleDetails />} />
+              <Route path="/privacy" element={<LegalPolicy />} />
+              <Route path="/about" element={<AboutUs />} />
 
-            <Route path="/profile" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
-            <Route path="/my-bookings" element={<ProtectedRoute><MyBookings /></ProtectedRoute>} />
-            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-            <Route path="/vendor-setup" element={<ProtectedRoute><VendorSetup /></ProtectedRoute>} />
-            <Route path="/my-bookings" element={<MyBookings />} />
+              {/* 🔐 Protected User Routes */}
+              <Route path="/profile" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
+              <Route path="/my-bookings" element={<ProtectedRoute><MyBookings /></ProtectedRoute>} />
+              <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+              <Route path="/vendor-setup" element={<ProtectedRoute><VendorSetup /></ProtectedRoute>} />
 
-            <Route path="/add-hotel" element={<ProtectedRoute><AddHotel /></ProtectedRoute>} />
-            <Route path="/edit-hotel/:id" element={<ProtectedRoute><EditHotel /></ProtectedRoute>} />
-            <Route path="/add-tour" element={<ProtectedRoute><AddTour /></ProtectedRoute>} />
-            <Route path="/edit-tour/:id" element={<ProtectedRoute><EditTour /></ProtectedRoute>} />
-            <Route path="/add-vehicle" element={<ProtectedRoute><AddVehicle /></ProtectedRoute>} />
+              {/* 🏨 Protected Service Management Routes */}
+              <Route path="/add-hotel" element={<ProtectedRoute><AddHotel /></ProtectedRoute>} />
+              <Route path="/edit-hotel/:id" element={<ProtectedRoute><EditHotel /></ProtectedRoute>} />
+              <Route path="/add-tour" element={<ProtectedRoute><AddTour /></ProtectedRoute>} />
+              <Route path="/edit-tour/:id" element={<ProtectedRoute><EditTour /></ProtectedRoute>} />
+              <Route path="/add-vehicle" element={<ProtectedRoute><AddVehicle /></ProtectedRoute>} />
 
-            <Route path='/admin/bookings' element={<ProtectedRoute><AdminBookings /></ProtectedRoute>} />
-            <Route path='/vendor/bookings' element={<ProtectedRoute><VendorBookings /></ProtectedRoute>} />
+              {/* 💼 Admin & Vendor Booking Management */}
+              <Route path='/admin/bookings' element={<ProtectedRoute><AdminBookings /></ProtectedRoute>} />
+              <Route path='/vendor/bookings' element={<ProtectedRoute><VendorBookings /></ProtectedRoute>} />
 
-            <Route path="/privacy" element={<LegalPolicy />} />
-            <Route path="/about" element={<AboutUs />} />
+              {/* 404 Route */}
+              <Route path="*" element={<div className="text-center py-20 font-bold text-gray-500">404 - Not Found</div>} />
+            </Routes>
+          </main>
 
-            <Route path="*" element={<div className="text-center py-20 font-bold text-gray-500">404 - Not Found</div>} />
-          </Routes>
-        </main>
-
-        <ChatBot /> 
-        <Footer />
-      </div>
-    </Router>
+          <ChatBot /> 
+          <Footer />
+        </div>
+      </Router>
+    </CurrencyProvider>
   );
 }
 

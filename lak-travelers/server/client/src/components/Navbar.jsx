@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import API from "../services/api";
 import logoImage from "../assets/logo.png"; 
-import LanguageSwitcher from "./LanguageSwitcher";
 
 const Navbar = () => {
   const navigate = useNavigate();
@@ -14,9 +13,7 @@ const Navbar = () => {
     const handleStorageChange = () => {
       setUser(JSON.parse(localStorage.getItem("userInfo")));
     };
-
     handleStorageChange();
-    
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
   }, [location]);
@@ -57,7 +54,6 @@ const Navbar = () => {
               onError={(e) => {e.target.onerror = null; e.target.src="https://via.placeholder.com/50?text=LT"}}
             />
           </div>
-          
           <div className="flex flex-col">
             <span className="text-lg md:text-xl font-extrabold tracking-tight text-gray-900 leading-none">
               Lak<span className="text-blue-600">Travelers</span>
@@ -70,37 +66,31 @@ const Navbar = () => {
 
         {/* NAVIGATION LINKS */}
         <div className="hidden md:flex items-center space-x-10 ml-auto mr-8">
-          {["Home", "Hotels", "Tours", "Vehicles"].map((item) => {
-            const path = item === "Home" ? "/" : `/${item.toLowerCase()}`;
+          {["Home", "Hotels", "Tours", "Vehicles", "Planner"].map((item) => {
+            // Planner පිටුව සඳහා විශේෂිත පාත් එකක් සකසමු
+            const path = item === "Home" ? "/" : item === "Planner" ? "/smart-planner" : `/${item.toLowerCase()}`;
             const isActive = location.pathname === path;
-
             return (
               <Link
                 key={item}
                 to={path}
-                className={`relative text-sm font-bold transition-colors py-2 ${
+                className={`relative text-sm font-bold transition-colors py-2 flex items-center gap-1 ${
                   isActive ? "text-blue-600" : "text-gray-600 hover:text-blue-600"
                 } group`}
               >
-                {item}
-                <span
-                  className={`absolute left-0 bottom-0 h-0.5 w-full bg-blue-600 transition-transform origin-left duration-300 ${
-                    isActive ? "scale-x-100" : "scale-x-0 group-hover:scale-x-100"
-                  }`}
-                />
+                {item === "Planner" ? "Smart Planner" : item}
+                {item === "Planner" && (
+                  <span className="text-[8px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-md font-black animate-pulse">AI</span>
+                )}
+                <span className={`absolute left-0 bottom-0 h-0.5 w-full bg-blue-600 transition-transform origin-left duration-300 ${isActive ? "scale-x-100" : "scale-x-0 group-hover:scale-x-100"}`} />
               </Link>
             );
           })}
         </div>
 
-        {/* LANGUAGE SWITCHER & AUTH SECTION */}
+        {/* MULTI-FUNCTIONAL TOOLS (Auth Only) */}
         <div className="flex items-center gap-4">
           
-          {/* ✅ LANGUAGE SWITCHER ADDED HERE */}
-          <div className="hidden lg:block">
-            <LanguageSwitcher />
-          </div>
-
           {user ? (
             <div className="relative">
               <button
@@ -109,22 +99,13 @@ const Navbar = () => {
               >
                 <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-600 overflow-hidden shadow-sm">
                   {user.profileImage ? (
-                    <img 
-                      src={user.profileImage} 
-                      alt={user.name} 
-                      className="h-full w-full object-cover" 
-                    />
+                    <img src={user.profileImage} alt={user.name} className="h-full w-full object-cover" />
                   ) : (
-                    <span className="text-white font-bold text-sm">
-                      {user.name.charAt(0).toUpperCase()}
-                    </span>
+                    <span className="text-white font-bold text-sm">{user.name.charAt(0).toUpperCase()}</span>
                   )}
                 </div>
                 <span className="hidden sm:block text-sm font-bold text-gray-700 max-w-[120px] truncate">{user.name}</span>
-                <svg 
-                  xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" 
-                  className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${isDropdownOpen ? "rotate-180" : ""}`}
-                >
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${isDropdownOpen ? "rotate-180" : ""}`}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
                 </svg>
               </button>
@@ -160,10 +141,7 @@ const Navbar = () => {
           )}
 
           {/* MOBILE HAMBURGER */}
-          <button 
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="md:hidden p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition"
-          >
+          <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="md:hidden p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition">
             {isMobileMenuOpen ? (
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
             ) : (
@@ -178,13 +156,18 @@ const Navbar = () => {
         <div className="md:hidden border-t border-gray-100 bg-white px-4 pt-4 pb-6 shadow-lg">
           <div className="flex flex-col space-y-4">
             
-            {/* ✅ MOBILE LANGUAGE SWITCHER */}
-            <div className="px-4 py-2">
-               <LanguageSwitcher />
-            </div>
-
-            {["Home", "Hotels", "Tours", "Vehicles"].map((item) => (
-              <Link key={item} to={item === "Home" ? "/" : `/${item.toLowerCase()}`} onClick={closeDropdown} className="text-lg font-bold px-4 py-2 rounded-lg text-gray-600 hover:bg-gray-50">{item}</Link>
+            {["Home", "Hotels", "Tours", "Vehicles", "Planner"].map((item) => (
+              <Link 
+                key={item} 
+                to={item === "Home" ? "/" : item === "Planner" ? "/smart-planner" : `/${item.toLowerCase()}`} 
+                onClick={closeDropdown} 
+                className="text-lg font-bold px-4 py-2 rounded-lg text-gray-600 hover:bg-gray-50 flex items-center justify-between"
+              >
+                {item === "Planner" ? "Smart Planner" : item}
+                {item === "Planner" && (
+                  <span className="text-[10px] bg-blue-600 text-white px-2 py-0.5 rounded-md font-black">AI</span>
+                )}
+              </Link>
             ))}
             {!user && (
               <div className="flex flex-col gap-3 pt-4 border-t border-gray-50">

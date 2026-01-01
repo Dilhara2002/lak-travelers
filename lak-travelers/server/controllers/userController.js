@@ -33,8 +33,6 @@ export const sendOTP = asyncHandler(async (req, res) => {
     },
   });
 
-  // Make sure you are NOT filtering out confirmed bookings
-const bookingsCount = await Booking.countDocuments({ status: { $ne: 'cancelled' } });
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
   otpStore[email] = { otp, expires: Date.now() + 600000 }; // 10 min expiry
 
@@ -80,7 +78,8 @@ export const registerUser = asyncHandler(async (req, res) => {
 
   if (user) {
     delete otpStore[email];
-    generateToken(res, user._id);
+    // Set cookie and get token string
+    const token = generateToken(res, user._id);
 
     res.status(201).json({
       _id: user._id,
@@ -88,6 +87,7 @@ export const registerUser = asyncHandler(async (req, res) => {
       email: user.email,
       role: user.role,
       isApproved: user.isApproved,
+      token: token, // Returned for frontend localStorage
     });
   } else {
     res.status(400);
@@ -106,13 +106,16 @@ export const authUser = asyncHandler(async (req, res) => {
   const user = await User.findOne({ email });
 
   if (user && (await user.matchPassword(password))) {
-    generateToken(res, user._id);
+    // Set cookie and get token string
+    const token = generateToken(res, user._id);
+
     res.json({
       _id: user._id,
       name: user.name,
       email: user.email,
       role: user.role,
       isApproved: user.isApproved,
+      token: token, // Returned for frontend localStorage
     });
   } else {
     res.status(401);
@@ -201,7 +204,7 @@ export const updateVendorProfile = asyncHandler(async (req, res) => {
  */
 export const getPendingVendors = asyncHandler(async (req, res) => {
   const vendors = await User.find({ role: 'vendor', isApproved: false })
-    .select('-password'); // includes vendorDetails, profileImage, etc.
+    .select('-password');
   res.json(vendors);
 });
 
@@ -228,16 +231,10 @@ export const approveVendor = asyncHandler(async (req, res) => {
  * @route   DELETE /api/users/reject/:id
  * @access  Private/Admin
  */
-/**
- * @desc    Reject and delete vendor request
- * @route   DELETE /api/users/reject/:id
- * @access  Private/Admin
- */
 export const rejectVendor = asyncHandler(async (req, res) => {
   const user = await User.findById(req.params.id);
 
   if (user && user.role === 'vendor') {
-    // Optional: send email notification about rejection here
     await User.findByIdAndDelete(req.params.id);
     res.json({ message: 'Vendor request rejected and account removed' });
   } else {
@@ -245,6 +242,7 @@ export const rejectVendor = asyncHandler(async (req, res) => {
     throw new Error('Vendor not found');
   }
 });
+
 /**
  * @desc    Admin manually creates a User or Vendor
  * @route   POST /api/users/admin/create
@@ -262,7 +260,7 @@ export const adminCreateUser = asyncHandler(async (req, res) => {
   const user = await User.create({
     name,
     email,
-    password, // This will be hashed by the User model middleware
+    password,
     role: role || 'user',
     isApproved: isApproved !== undefined ? isApproved : true,
   });
@@ -289,7 +287,6 @@ export const adminUpdateUser = asyncHandler(async (req, res) => {
     user.role = req.body.role || user.role;
     user.isApproved = req.body.isApproved !== undefined ? req.body.isApproved : user.isApproved;
 
-    // If updating vendor details manually
     if (req.body.vendorDetails) {
       user.vendorDetails = { ...user.vendorDetails, ...req.body.vendorDetails };
     }
@@ -325,8 +322,6 @@ export const adminDeleteUser = asyncHandler(async (req, res) => {
     throw new Error('User not found');
   }
 });
-
-// Add this at the bottom of userController.js
 
 /**
  * @desc    Get all users for Admin

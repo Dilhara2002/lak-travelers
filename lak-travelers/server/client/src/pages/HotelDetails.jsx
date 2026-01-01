@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import API from '../services/api'; 
-import { toast } from 'react-toastify'; // Toast පාවිච්චි කිරීම වඩාත් වෘත්තීය මට්ටමක පවතී
+import { toast } from 'react-toastify';
 
 const HotelDetails = () => {
   const { id } = useParams();
@@ -31,17 +31,17 @@ const HotelDetails = () => {
       setLoading(false);
     } catch (error) {
       console.error("Fetch Error:", error);
+      toast.error("Failed to load hotel details");
       setLoading(false);
     }
   };
 
   useEffect(() => {
     fetchHotel();
-    // eslint-disable-next-line
   }, [id]);
 
   /**
-   * 💰 මුළු මුදල සහ දින ගණන ගණනය කිරීම (Memoized for performance)
+   * 💰 මුළු මුදල සහ දින ගණන ගණනය කිරීම
    */
   const { totalNights, calculatedPrice } = useMemo(() => {
     if (!checkIn || !checkOut || !hotel) return { totalNights: 0, calculatedPrice: 0 };
@@ -58,102 +58,95 @@ const HotelDetails = () => {
   }, [checkIn, checkOut, hotel]);
 
   /**
-   * පින්තූර URL එක සකසන Helper Function එක
+   * පින්තූර URL Helper
    */
   const getImageUrl = (imagePath) => {
     if (!imagePath) return "https://via.placeholder.com/800x400?text=No+Image+Available";
     if (imagePath.startsWith("http")) return imagePath;
-    const backendURL = "https://lak-travelers-api.vercel.app"; 
-    const cleanPath = imagePath.startsWith("/") ? imagePath : `/${imagePath}`;
-    return `${backendURL}${cleanPath}`;
+    const backendURL = "http://localhost:5001"; 
+    return `${backendURL}${imagePath.startsWith("/") ? imagePath : `/${imagePath}`}`;
   };
 
   /**
-   * හෝටලය වෙන් කිරීම (Booking)
+   * හෝටලය වෙන් කිරීම (Reserve Now, Pay Later)
    */
   const handleBooking = async (e) => {
     e.preventDefault();
 
+    if (!user) {
+      toast.warn("Please login to make a reservation");
+      navigate('/login');
+      return;
+    }
+
     if (totalNights <= 0) {
-      alert("Check-out date must be after Check-in date! ⚠️");
+      toast.error("Check-out date must be after Check-in date!");
       return;
     }
 
     try {
+      // Backend එකට දත්ත යැවීම
       await API.post('/bookings', { 
-        bookingType: 'hotel', 
-        hotelId: id, 
+        hotel: id, 
         checkInDate: checkIn, 
         checkOutDate: checkOut,
-        totalPrice: calculatedPrice // ✅ දැන් මෙය define කර ඇත
+        totalPrice: calculatedPrice,
+        paymentMethod: 'pay_on_arrival' // ✅ පසුව ගෙවීමේ ක්‍රමය
       });
-      alert("Booking Successful! 🎉");
+
+      toast.success("Reservation Successful! Pay on Arrival. 🎉");
       navigate('/my-bookings');
     } catch (error) {
-      console.error("Booking Error:", error);
-      alert(error.response?.data?.message || "Booking Failed! Please Login first.");
-      if (error.response?.status === 401) navigate('/login');
+      toast.error(error.response?.data?.message || "Booking Failed!");
     }
   };
 
-  /**
-   * හෝටලය මැකීම (Delete)
-   */
   const handleDelete = async () => {
     if (window.confirm("Are you sure you want to DELETE this hotel? ⚠️")) {
       try {
         await API.delete(`/hotels/${id}`);
-        alert("Hotel Deleted! 🗑️");
+        toast.success("Hotel Deleted!");
         navigate('/hotels');
       } catch (error) {
-        alert("Failed to delete hotel");
+        toast.error("Failed to delete hotel");
       }
     }
   };
 
-  /**
-   * Review එක සඳහා පින්තූරයක් Upload කිරීම
-   */
   const handleReviewImageUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-
     const formData = new FormData();
     formData.append('image', file);
     setUploading(true);
-
     try {
       const { data } = await API.post('/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       setReviewImage(data);
       setUploading(false);
-      alert("Photo uploaded! 📸");
+      toast.info("Photo uploaded!");
     } catch (error) {
-      console.error("Upload Error:", error);
       setUploading(false);
-      alert('Image upload failed');
+      toast.error('Image upload failed');
     }
   };
 
-  /**
-   * Review එක Submit කිරීම
-   */
   const submitReviewHandler = async (e) => {
     e.preventDefault();
     if (rating === 0) {
-      alert("Please select a star rating! ⭐");
+      toast.warn("Please select a star rating!");
       return;
     }
     try {
       await API.post(`/hotels/${id}/reviews`, { rating, comment, image: reviewImage });
-      alert('Review Submitted! ⭐');
+      toast.success('Review Submitted!');
       setComment('');
       setRating(0); 
       setReviewImage(''); 
       fetchHotel(); 
     } catch (error) {
-      alert(error.response?.data?.message || "Review Failed");
+      toast.error(error.response?.data?.message || "Review Failed");
     }
   };
 
@@ -176,11 +169,7 @@ const HotelDetails = () => {
       
       {/* 1. HERO IMAGE BANNER */}
       <div className="relative h-[400px] md:h-[500px]">
-        <img 
-          src={getImageUrl(hotel.image)} 
-          alt={hotel.name} 
-          className="w-full h-full object-cover"
-        />
+        <img src={getImageUrl(hotel.image)} alt={hotel.name} className="w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
         <div className="absolute bottom-0 left-0 p-6 md:p-12 text-white max-w-7xl mx-auto w-full">
            <h1 className="text-4xl md:text-5xl font-extrabold mb-2">{hotel.name}</h1>
@@ -193,159 +182,77 @@ const HotelDetails = () => {
 
       <div className="container mx-auto px-4 md:px-8 -mt-8 relative z-10 grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-7xl">
         
-        {/* 2. MAIN CONTENT (Left Side) */}
+        {/* 2. MAIN CONTENT */}
         <div className="lg:col-span-2 space-y-8">
-          
           <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-bold text-gray-800">About this place</h2>
-              {user && (user.role === 'admin' || (hotel.user && (user._id === hotel.user || user._id === hotel.user?._id))) && (
-                <div className="flex gap-3">
-                  <button onClick={() => navigate(`/edit-hotel/${hotel._id}`)} className="text-blue-600 font-bold hover:underline">Edit</button>
-                  <button onClick={handleDelete} className="text-red-500 font-bold hover:underline">Delete</button>
+              {user && (user.role === 'admin' || (hotel.user && user._id === hotel.user)) && (
+                <div className="flex gap-3 text-sm">
+                  <button onClick={() => navigate(`/edit-hotel/${hotel._id}`)} className="bg-blue-50 text-blue-600 px-4 py-2 rounded-lg font-bold">Edit</button>
+                  <button onClick={handleDelete} className="bg-red-50 text-red-500 px-4 py-2 rounded-lg font-bold">Delete</button>
                 </div>
               )}
             </div>
             <p className="text-gray-600 leading-relaxed text-lg whitespace-pre-line">{hotel.description}</p>
           </div>
 
-          {hotel.mapUrl && (
-             <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-              <h3 className="text-xl font-bold mb-4 text-gray-800">Location 📍</h3>
-              <div className="w-full h-80 rounded-xl overflow-hidden bg-gray-100">
-                <iframe src={hotel.mapUrl} width="100%" height="100%" style={{ border: 0 }} allowFullScreen="" title="Location Map"></iframe>
-              </div>
-            </div>
-          )}
-
-          {/* REVIEWS SECTION */}
+          {/* REVIEWS */}
           <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
-            <div className="flex items-center gap-4 mb-8 pb-8 border-b border-gray-100">
-               <div className="text-center">
-                 <div className="text-5xl font-extrabold text-gray-900">{hotel.rating ? hotel.rating.toFixed(1) : "0.0"}</div>
-                 <div className="text-yellow-500 text-lg">⭐⭐⭐⭐⭐</div>
-               </div>
-               <div className="h-12 w-px bg-gray-200"></div>
-               <div>
-                 <h2 className="text-2xl font-bold text-gray-900">Guest Reviews</h2>
-                 <p className="text-gray-500">{hotel.numReviews} verified ratings</p>
-               </div>
-            </div>
-            
-            {hotel.reviews.length === 0 ? (
-               <div className="text-center py-10">
-                 <p className="text-gray-400 italic">No reviews yet. Be the first to review!</p>
-               </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10">
-                {hotel.reviews.map((review) => (
-                  <div key={review._id} className="flex flex-col gap-3">
-                    <div className="flex items-center gap-3">
-                       <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 font-bold text-lg border border-blue-100">
-                         {review.name.charAt(0).toUpperCase()}
-                       </div>
-                       <div>
-                         <p className="font-bold text-gray-900 leading-tight">{review.name}</p>
-                         <p className="text-xs text-gray-400">{new Date(review.createdAt).toLocaleDateString()}</p>
-                       </div>
+            <h2 className="text-2xl font-bold mb-6">Guest Reviews</h2>
+            {hotel.reviews.length === 0 ? <p className="text-gray-400 italic">No reviews yet.</p> : (
+              <div className="space-y-6">
+                {hotel.reviews.map((r) => (
+                  <div key={r._id} className="border-b pb-6">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="font-bold text-gray-900">{r.name}</span>
+                      <span className="text-yellow-400">{"★".repeat(r.rating)}</span>
                     </div>
-                    <div>
-                       <div className="flex text-yellow-400 text-xs mb-1">
-                         {[...Array(5)].map((_, i) => (
-                           <span key={i} className="text-lg">{i < review.rating ? "★" : "☆"}</span>
-                         ))}
-                       </div>
-                       <p className="text-gray-600 text-sm leading-relaxed italic">"{review.comment}"</p>
-                    </div>
-                    {review.image && (
-                      <img src={getImageUrl(review.image)} alt="Review" className="h-20 w-20 object-cover rounded-lg border border-gray-200 mt-2" />
-                    )}
+                    <p className="text-gray-600">{r.comment}</p>
                   </div>
                 ))}
               </div>
             )}
 
-            <div className="mt-12 bg-gray-50 p-6 rounded-2xl border border-gray-200">
-              <h3 className="text-lg font-bold mb-4 flex items-center gap-2">Write a Review ✍️</h3>
-              {user ? (
-                <form onSubmit={submitReviewHandler} className="space-y-6">
-                  <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2">
-                      Your Rating: <span className="text-blue-600 ml-2 font-normal text-xs uppercase tracking-wide">{getRatingLabel(hoverRating || rating)}</span>
-                    </label>
-                    <div className="flex items-center gap-1">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <button
-                          key={star}
-                          type="button"
-                          onClick={() => setRating(star)}
-                          onMouseEnter={() => setHoverRating(star)}
-                          onMouseLeave={() => setHoverRating(0)}
-                          className="focus:outline-none transition-transform hover:scale-110"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" 
-                            className={`w-8 h-8 transition-colors duration-200 ${star <= (hoverRating || rating) ? 'text-yellow-400' : 'text-gray-300'}`}>
-                            <path fillRule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.007 5.404.433c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.433 2.082-5.006z" clipRule="evenodd" />
-                          </svg>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                     <div>
-                       <label className="block text-sm font-bold text-gray-700 mb-2">Share your thoughts</label>
-                       <textarea rows="3" className="w-full p-4 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400 resize-none transition-shadow" placeholder="How was your stay?" value={comment} onChange={(e) => setComment(e.target.value)} required></textarea>
-                     </div>
-                     <div>
-                        <label className="block text-sm font-bold text-gray-700 mb-2">Add a Photo (Optional)</label>
-                        <input type="file" onChange={handleReviewImageUpload} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:bg-blue-600 file:text-white hover:file:bg-blue-700 cursor-pointer"/>
-                     </div>
-                  </div>
-
-                  <div className="flex justify-end pt-2">
-                    <button type="submit" disabled={uploading} className="bg-gray-900 text-white px-8 py-3 rounded-xl font-bold hover:bg-gray-800 transition shadow-lg disabled:opacity-50">
-                      {uploading ? 'Uploading Photo...' : 'Post Review'}
-                    </button>
-                  </div>
-                </form>
-              ) : (
-                <div className="text-sm text-gray-500 bg-white p-4 rounded-xl border border-dashed border-gray-300 text-center">
-                  Please <a href="/login" className="text-blue-600 font-bold hover:underline">log in</a> to leave a review.
+            {/* REVIEW FORM */}
+            <div className="mt-8 bg-gray-50 p-6 rounded-xl">
+              <h3 className="font-bold mb-4">Write a Review</h3>
+              <form onSubmit={submitReviewHandler} className="space-y-4">
+                <div className="flex gap-1">
+                  {[1,2,3,4,5].map(s => (
+                    <button key={s} type="button" onClick={() => setRating(s)} className={`text-2xl ${s <= rating ? 'text-yellow-400' : 'text-gray-300'}`}>★</button>
+                  ))}
                 </div>
-              )}
+                <textarea className="w-full p-3 border rounded-lg" placeholder="Share your experience..." value={comment} onChange={e => setComment(e.target.value)} required />
+                <button type="submit" className="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold">Post Review</button>
+              </form>
             </div>
           </div>
         </div>
 
-        {/* 3. SIDEBAR (Booking) */}
+        {/* 3. BOOKING SIDEBAR */}
         <div className="lg:col-span-1">
           <div className="bg-white p-6 rounded-2xl shadow-xl border border-gray-100 sticky top-28">
-            <div className="flex justify-between items-end mb-6">
-              <div>
+            <div className="mb-6">
                 <span className="text-3xl font-extrabold text-gray-900">Rs {hotel.pricePerNight.toLocaleString()}</span>
                 <span className="text-gray-500 font-medium"> / night</span>
-              </div>
             </div>
 
             <form onSubmit={handleBooking} className="space-y-4">
-              <div className="border border-gray-300 rounded-xl overflow-hidden">
-                <div className="flex border-b border-gray-300">
-                  <div className="w-1/2 p-3 border-r border-gray-300 bg-gray-50">
-                    <label className="block text-xs font-bold text-gray-500 uppercase">Check-In</label>
-                    <input type="date" className="w-full bg-transparent outline-none text-gray-700 text-sm mt-1" value={checkIn} onChange={(e) => setCheckIn(e.target.value)} required />
-                  </div>
-                  <div className="w-1/2 p-3 bg-gray-50">
-                    <label className="block text-xs font-bold text-gray-500 uppercase">Check-Out</label>
-                    <input type="date" className="w-full bg-transparent outline-none text-gray-700 text-sm mt-1" value={checkOut} onChange={(e) => setCheckOut(e.target.value)} required />
-                  </div>
+              <div className="grid grid-cols-2 border rounded-xl overflow-hidden">
+                <div className="p-3 border-r bg-gray-50">
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase">Check-In</label>
+                  <input type="date" className="w-full bg-transparent text-sm" value={checkIn} onChange={e => setCheckIn(e.target.value)} required />
+                </div>
+                <div className="p-3 bg-gray-50">
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase">Check-Out</label>
+                  <input type="date" className="w-full bg-transparent text-sm" value={checkOut} onChange={e => setCheckOut(e.target.value)} required />
                 </div>
               </div>
 
-              {/* Price Calculation Display */}
               {totalNights > 0 && (
-                <div className="bg-blue-50 p-4 rounded-xl space-y-2 border border-blue-100 animate-in fade-in duration-300">
-                   <div className="flex justify-between text-sm text-gray-600 italic">
+                <div className="bg-blue-50 p-4 rounded-xl space-y-2 border border-blue-100">
+                   <div className="flex justify-between text-sm text-gray-600">
                      <span>Rs {hotel.pricePerNight.toLocaleString()} x {totalNights} nights</span>
                      <span>Rs {calculatedPrice.toLocaleString()}</span>
                    </div>
@@ -357,16 +264,19 @@ const HotelDetails = () => {
                 </div>
               )}
 
-              <button type="submit" className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-blue-700 transition shadow-lg active:scale-95">Reserve Now</button>
-              <p className="text-center text-xs text-gray-400 mt-2">No payment required now</p>
+              <button type="submit" className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:bg-blue-700 transition">
+                Reserve Now
+              </button>
+              <p className="text-center text-[10px] text-gray-400 mt-2">No payment required until you stay</p>
             </form>
             
-            <div className="mt-6 pt-6 border-t border-gray-100 grid grid-cols-2 gap-4 text-xs text-gray-500">
-               <div className="flex items-center gap-2"><span className="text-green-500">✔</span> Free Cancellation</div>
-               <div className="flex items-center gap-2"><span className="text-green-500">✔</span> Instant Confirmation</div>
+            <div className="mt-6 pt-6 border-t grid grid-cols-2 gap-4 text-[10px] text-gray-500">
+               <div className="flex items-center gap-1"><span className="text-green-500 font-bold">✔</span> Free Cancellation</div>
+               <div className="flex items-center gap-1"><span className="text-green-500 font-bold">✔</span> Pay on Arrival</div>
             </div>
           </div>
         </div>
+
       </div>
     </div>
   );
