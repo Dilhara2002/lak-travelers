@@ -1,7 +1,8 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import React, { useEffect, useRef } from "react";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
-import { ToastContainer } from 'react-toastify';
+import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 import { CurrencyProvider } from './context/CurrencyContext';
@@ -25,7 +26,8 @@ import EditTour from "./pages/EditTour";
 import VehicleList from "./pages/VehicleList";
 import VehicleDetails from "./pages/VehicleDetails";
 import AddVehicle from "./pages/AddVehicle";
-import SmartPlanner from "./pages/SmartPlanner"; // 🚀 AI Planner පිටුව මෙහිදී Import කර ඇත
+import SmartPlanner from "./pages/SmartPlanner"; 
+import CommunityFeed from "./pages/CommunityFeed";
 
 import LegalPolicy from "./pages/LegalPolicy";
 import AboutUs from "./pages/AboutUs";
@@ -35,26 +37,40 @@ import ChatBot from './components/ChatBot';
 import AdminBookings from './pages/AdminBookings';
 import VendorBookings from './pages/VendorBookings';
 
-// 🛡️ Protected Route Component
+// 🛡️ Fixed Protected Route Component
 const ProtectedRoute = ({ children }) => {
   const userInfo = JSON.parse(localStorage.getItem('userInfo'));
-  return userInfo ? children : <Navigate to="/login" />;
+  const location = useLocation();
+  const toastId = useRef(null); // පණිවිඩය පාලනය කිරීමට useRef භාවිතා කරයි
+
+  useEffect(() => {
+    if (!userInfo) {
+      // දැනටමත් පණිවිඩයක් පෙන්වන්නේ නැතිනම් පමණක් අලුත් එකක් පෙන්වයි
+      if (!toast.isActive(toastId.current)) {
+        toastId.current = toast.error("Please login first to access this feature! 🔐", {
+          toastId: "login-first-error" // ස්ථාවර ID එකක් ලබා දීමෙන් දෙවරක් දිස්වීම වළකී
+        });
+      }
+    }
+  }, [userInfo]);
+
+  return userInfo ? children : <Navigate to="/login" state={{ from: location }} replace />;
 };
 
 function App() {
   return (
     <CurrencyProvider>
       <Router>
-        <ToastContainer position="top-center" autoClose={2000} />
+        {/* ToastContainer එකට limit={1} ලබා දීමෙන් ද එකවර පණිවිඩ දෙකක් දිස්වීම පාලනය කළ හැක */}
+        <ToastContainer position="top-center" autoClose={3000} limit={1} />
         
         <div className="font-sans bg-gray-50 text-gray-900 min-h-screen flex flex-col relative">
           <Navbar />
           
           <main className="pt-24 flex-grow px-4 md:px-0">
             <Routes>
-              {/* Public Routes */}
+              {/* --- 🌍 Public Routes --- */}
               <Route path="/" element={<Home />} />
-              <Route path="/smart-planner" element={<SmartPlanner />} /> {/* 🗺️ AI GraphRAG Planner Route */}
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/hotels" element={<HotelList />} />
@@ -66,20 +82,33 @@ function App() {
               <Route path="/privacy" element={<LegalPolicy />} />
               <Route path="/about" element={<AboutUs />} />
 
-              {/* 🔐 Protected User Routes */}
+              {/* --- 🔐 Protected AI & Community Routes --- */}
+              <Route path="/smart-planner" element={
+                <ProtectedRoute>
+                  <SmartPlanner />
+                </ProtectedRoute>
+              } /> 
+              
+              <Route path="/community" element={
+                <ProtectedRoute>
+                  <CommunityFeed />
+                </ProtectedRoute>
+              } />
+
+              {/* --- 🔐 Protected User Routes --- */}
               <Route path="/profile" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
               <Route path="/my-bookings" element={<ProtectedRoute><MyBookings /></ProtectedRoute>} />
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/vendor-setup" element={<ProtectedRoute><VendorSetup /></ProtectedRoute>} />
 
-              {/* 🏨 Protected Service Management Routes */}
+              {/* --- 🏨 Protected Service Management Routes --- */}
               <Route path="/add-hotel" element={<ProtectedRoute><AddHotel /></ProtectedRoute>} />
               <Route path="/edit-hotel/:id" element={<ProtectedRoute><EditHotel /></ProtectedRoute>} />
               <Route path="/add-tour" element={<ProtectedRoute><AddTour /></ProtectedRoute>} />
               <Route path="/edit-tour/:id" element={<ProtectedRoute><EditTour /></ProtectedRoute>} />
               <Route path="/add-vehicle" element={<ProtectedRoute><AddVehicle /></ProtectedRoute>} />
 
-              {/* 💼 Admin & Vendor Booking Management */}
+              {/* --- 💼 Admin & Vendor Booking Management --- */}
               <Route path='/admin/bookings' element={<ProtectedRoute><AdminBookings /></ProtectedRoute>} />
               <Route path='/vendor/bookings' element={<ProtectedRoute><VendorBookings /></ProtectedRoute>} />
 

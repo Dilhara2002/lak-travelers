@@ -40,6 +40,16 @@ const Navbar = () => {
     setIsMobileMenuOpen(false);
   };
 
+  // මෙනු අයිතම ලැයිස්තුව (Community Feed ඇතුළුව)
+  const navItems = [
+    { name: "Home", path: "/" },
+    { name: "Hotels", path: "/hotels" },
+    { name: "Tours", path: "/tours" },
+    { name: "Vehicles", path: "/vehicles" },
+    { name: "Planner", path: "/smart-planner", isAI: true },
+    { name: "Community", path: "/community", isLive: true }
+  ];
+
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 border-b border-gray-100 bg-white/90 backdrop-blur-md shadow-sm transition-all duration-300">
       <div className="mx-auto flex h-20 max-w-full items-center px-6 sm:px-10 lg:px-16">
@@ -65,31 +75,40 @@ const Navbar = () => {
         </Link>
 
         {/* NAVIGATION LINKS */}
-        <div className="hidden md:flex items-center space-x-10 ml-auto mr-8">
-          {["Home", "Hotels", "Tours", "Vehicles", "Planner"].map((item) => {
-            // Planner පිටුව සඳහා විශේෂිත පාත් එකක් සකසමු
-            const path = item === "Home" ? "/" : item === "Planner" ? "/smart-planner" : `/${item.toLowerCase()}`;
-            const isActive = location.pathname === path;
+        <div className="hidden xl:flex items-center space-x-8 ml-auto mr-8">
+          {navItems.map((item) => {
+            const isActive = location.pathname === item.path;
             return (
               <Link
-                key={item}
-                to={path}
-                className={`relative text-sm font-bold transition-colors py-2 flex items-center gap-1 ${
+                key={item.name}
+                to={item.path}
+                className={`relative text-sm font-bold transition-colors py-2 flex items-center gap-1.5 ${
                   isActive ? "text-blue-600" : "text-gray-600 hover:text-blue-600"
                 } group`}
               >
-                {item === "Planner" ? "Smart Planner" : item}
-                {item === "Planner" && (
+                {item.name === "Planner" ? "Smart Planner" : item.name}
+                
+                {/* AI Badge for Planner */}
+                {item.isAI && (
                   <span className="text-[8px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-md font-black animate-pulse">AI</span>
                 )}
+                
+                {/* Live Badge for Community */}
+                {item.isLive && (
+                  <span className="flex h-2 w-2 relative">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                  </span>
+                )}
+
                 <span className={`absolute left-0 bottom-0 h-0.5 w-full bg-blue-600 transition-transform origin-left duration-300 ${isActive ? "scale-x-100" : "scale-x-0 group-hover:scale-x-100"}`} />
               </Link>
             );
           })}
         </div>
 
-        {/* MULTI-FUNCTIONAL TOOLS (Auth Only) */}
-        <div className="flex items-center gap-4">
+        {/* AUTH TOOLS */}
+        <div className="flex items-center gap-4 ml-auto xl:ml-0">
           
           {user ? (
             <div className="relative">
@@ -141,7 +160,7 @@ const Navbar = () => {
           )}
 
           {/* MOBILE HAMBURGER */}
-          <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="md:hidden p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition">
+          <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="xl:hidden p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition">
             {isMobileMenuOpen ? (
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
             ) : (
@@ -153,26 +172,33 @@ const Navbar = () => {
 
       {/* MOBILE MENU */}
       {isMobileMenuOpen && (
-        <div className="md:hidden border-t border-gray-100 bg-white px-4 pt-4 pb-6 shadow-lg">
-          <div className="flex flex-col space-y-4">
+        <div className="xl:hidden border-t border-gray-100 bg-white px-4 pt-4 pb-6 shadow-lg overflow-y-auto max-h-[calc(100vh-80px)]">
+          <div className="flex flex-col space-y-2">
             
-            {["Home", "Hotels", "Tours", "Vehicles", "Planner"].map((item) => (
+            {navItems.map((item) => (
               <Link 
-                key={item} 
-                to={item === "Home" ? "/" : item === "Planner" ? "/smart-planner" : `/${item.toLowerCase()}`} 
+                key={item.name} 
+                to={item.path} 
                 onClick={closeDropdown} 
-                className="text-lg font-bold px-4 py-2 rounded-lg text-gray-600 hover:bg-gray-50 flex items-center justify-between"
+                className="text-lg font-bold px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-50 flex items-center justify-between transition-colors"
               >
-                {item === "Planner" ? "Smart Planner" : item}
-                {item === "Planner" && (
-                  <span className="text-[10px] bg-blue-600 text-white px-2 py-0.5 rounded-md font-black">AI</span>
+                <div className="flex items-center gap-3">
+                  {item.name === "Planner" ? "Smart Planner" : item.name}
+                  {item.isAI && <span className="text-[10px] bg-blue-600 text-white px-2 py-0.5 rounded-md font-black">AI</span>}
+                </div>
+                {item.isLive && (
+                  <span className="flex items-center gap-2">
+                    <span className="text-[10px] text-emerald-500 font-black uppercase">Live Feed</span>
+                    <span className="h-2 w-2 rounded-full bg-emerald-500"></span>
+                  </span>
                 )}
               </Link>
             ))}
+
             {!user && (
-              <div className="flex flex-col gap-3 pt-4 border-t border-gray-50">
-                <Link to="/login" onClick={closeDropdown} className="text-center py-3 text-gray-600 font-bold">Log In</Link>
-                <Link to="/register" onClick={closeDropdown} className="text-center py-3 bg-blue-600 text-white rounded-xl font-bold">Sign Up</Link>
+              <div className="flex flex-col gap-3 pt-6 mt-4 border-t border-gray-100">
+                <Link to="/login" onClick={closeDropdown} className="text-center py-4 text-gray-600 font-bold rounded-xl border border-gray-100">Log In</Link>
+                <Link to="/register" onClick={closeDropdown} className="text-center py-4 bg-blue-600 text-white rounded-xl font-bold shadow-md shadow-blue-100">Sign Up</Link>
               </div>
             )}
           </div>

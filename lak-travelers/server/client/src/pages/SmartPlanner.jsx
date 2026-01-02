@@ -46,14 +46,11 @@ const SmartPlanner = () => {
             const { data } = await axios.post("http://localhost:5001/api/ai/chat", {
                 message: `I want to plan a ${formData.duration} day trip to ${formData.location}. 
                   My preferences are: ${formData.preferences}. 
-                  I prefer ${formData.transportType} transport.
-                  
-                  CRITICAL INSTRUCTION: For every hotel, resort, or vehicle you recommend, you MUST include its Database ID at the end of the sentence like this: (ID: 24_CHARACTER_ID_HERE). 
-                  Provide the itinerary in a HIGHLY VISUAL format with numbered lists and bold headings.`,
+                  I prefer ${formData.transportType} transport.`,
                 history: []
             });
             setItinerary(data.reply);
-            toast.success("Itinerary generated successfully! ✨");
+            toast.success("CCTNS Cognitive Plan Generated! ✨");
         } catch (err) {
             console.error("AI Error:", err);
             toast.error("Failed to generate plan. Check server connection.");
@@ -112,12 +109,12 @@ const SmartPlanner = () => {
         }
     };
 
-    // ✅ 🤖 Real-time Booking Logic (ID Detection & UI Enhancement)
+    // ✅ 🤖 CCTNS: Cognitive Nudging & Trust Modeling Logic
     const MarkdownComponents = {
         p: ({ children }) => {
             const content = React.Children.toArray(children).join("");
             
-            // MongoDB ID එකක් ඇත්දැයි බැලීම (24 characters hex)
+            // MongoDB ID එකක් ඇත්දැයි බැලීම
             const idRegex = /([0-9a-fA-F]{24})/;
             const match = content.match(idRegex);
 
@@ -125,25 +122,27 @@ const SmartPlanner = () => {
                 const id = match[1];
                 const lowerContent = content.toLowerCase();
                 
-                // එය හෝටලයක් ද වාහනයක් ද යන්න තීරණය කිරීම
                 const isHotel = lowerContent.includes('hotel') || lowerContent.includes('resort') || lowerContent.includes('stay') || lowerContent.includes('villa');
                 const isVehicle = lowerContent.includes('vehicle') || lowerContent.includes('car') || lowerContent.includes('transport') || lowerContent.includes('van');
 
                 return (
-                    <div className="mb-8 p-6 bg-slate-50/50 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-md transition-all">
-                        <p className="mb-4 text-slate-700 leading-relaxed font-medium">
-                            {/* ID එක පෙළෙන් ඉවත් කර පිරිසිදු පෙනුමක් සඳහා පෙන්වීම */}
+                    <div className="my-8 p-6 bg-white rounded-[2rem] border border-slate-100 shadow-xl shadow-slate-200/50 hover:scale-[1.01] transition-transform duration-300">
+                        {/* CCTNS Pillar: Community Experience Sharing Label */}
+                        <div className="flex items-center gap-2 mb-3">
+                            <span className="bg-emerald-100 text-emerald-600 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-tighter">🛡️ Community Verified & Recalibrated</span>
+                        </div>
+                        <p className="mb-4 text-slate-700 leading-relaxed font-semibold italic">
                             {content.replace(`(ID: ${id})`, "").replace(`ID: ${id}`, "").replace(`(${id})`, "")}
                         </p>
-                        <div className="flex flex-wrap gap-3">
+                        <div className="flex flex-wrap gap-4">
                             {isHotel && (
-                                <Link to={`/hotels/${id}`} className="bg-orange-500 text-white px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-900 transition-all flex items-center gap-2 shadow-lg shadow-orange-200">
-                                    🏨 Book This Hotel
+                                <Link to={`/hotels/${id}`} className="bg-gradient-to-r from-orange-500 to-amber-500 text-white px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:brightness-110 transition-all flex items-center gap-2 shadow-lg shadow-orange-200">
+                                    🏨 Secure My Stay
                                 </Link>
                             )}
                             {isVehicle && (
-                                <Link to={`/vehicles/${id}`} className="bg-blue-600 text-white px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-900 transition-all flex items-center gap-2 shadow-lg shadow-blue-200">
-                                    🚗 Rent This Vehicle
+                                <Link to={`/vehicles/${id}`} className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:brightness-110 transition-all flex items-center gap-2 shadow-lg shadow-blue-200">
+                                    🚗 Reserve Transport
                                 </Link>
                             )}
                         </div>
@@ -151,12 +150,36 @@ const SmartPlanner = () => {
                 );
             }
             return <p className="mb-6 leading-relaxed text-slate-600 font-medium">{children}</p>;
+        },
+        // ✅ CCTNS Pillar: Cognitive Nudging (Active Suggestions/Warnings)
+        blockquote: ({ children }) => (
+            <div className="bg-gradient-to-br from-orange-50 to-amber-50 border-l-8 border-orange-500 p-8 my-10 rounded-3xl shadow-xl shadow-orange-100/50 relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:rotate-12 transition-transform duration-500 text-6xl">💡</div>
+                <div className="flex items-center gap-3 mb-4">
+                    <span className="bg-orange-500 text-white p-2 rounded-xl text-xs font-black animate-pulse uppercase">AI Nudge</span>
+                    <span className="text-[10px] font-black uppercase text-orange-600 tracking-widest">Cognitive Suggestion</span>
+                </div>
+                <div className="text-slate-700 font-bold leading-relaxed italic text-lg relative z-10">
+                    {children}
+                </div>
+            </div>
+        ),
+        h2: ({ children }) => {
+            const text = String(children);
+            if (text.includes("Logistics") || text.includes("Budget") || text.includes("Safety")) {
+                return (
+                    <h2 className="text-xl font-black text-slate-900 bg-slate-100/50 inline-block px-6 py-2 rounded-2xl mt-10 mb-6 border-l-4 border-orange-500">
+                        {children}
+                    </h2>
+                );
+            }
+            return <h2 className="text-3xl font-black text-slate-800 mt-12 mb-6 tracking-tight">{children}</h2>;
         }
     };
 
     const shareOnWhatsApp = () => {
         if (!itinerary) return;
-        const title = `*🌴 My Sri Lankan Trip Plan - Lak Travelers* \n\n`;
+        const title = `*🌴 My Trusted Trip Plan - Lak Travelers (CCTNS)* \n\n`;
         const details = `📍 *Destination:* ${formData.location} \n⏳ *Duration:* ${formData.duration} Days \n\n`;
         const message = encodeURIComponent(title + details + "Plan yours at: http://localhost:5173/smart-planner");
         window.open(`https://wa.me/?text=${message}`, "_blank");
@@ -167,7 +190,7 @@ const SmartPlanner = () => {
         element.style.display = 'block';
         const opt = {
             margin: [0.5, 0.5, 0.5, 0.5],
-            filename: `LakTravelers_Itinerary_${formData.location || 'Plan'}.pdf`,
+            filename: `LakTravelers_CCTNS_Plan_${formData.location || 'Itinerary'}.pdf`,
             image: { type: 'jpeg', quality: 1.0 },
             html2canvas: { scale: 3, useCORS: true, letterRendering: true },
             jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' },
@@ -180,119 +203,131 @@ const SmartPlanner = () => {
     };
 
     return (
-        <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
-            {/* HERO SECTION */}
-            <div className="relative h-[400px] flex items-center justify-center overflow-hidden bg-slate-900">
+        <div className="min-h-screen bg-[#f8fafc] font-sans text-slate-900 selection:bg-orange-100">
+            {/* --- MODERN HERO --- */}
+            <div className="relative h-[550px] flex items-center justify-center overflow-hidden">
                 <div className="absolute inset-0 z-0">
                     <img
-                        src="https://ml6tb8qifjjl.i.optimole.com/cb:qpCN.88a/w:1920/h:1247/q:mauto/f:best/https://www.technology-innovators.com/wp-content/uploads/2023/05/Smart-Tourism-Enhancing-Visitor-Experiences-and-Sustainable-Travel_13_11zon.jpg"
-                        className="w-full h-full object-cover opacity-40 scale-105"
-                        alt="Hero Background"
+                        src="https://media.chirpn.com/How_AI_Is_Revolutionizing_the_Travel_and_Tourism_Industry_Hero_Image_d28d4bc6c7.jpg"
+                        className="w-full h-full object-cover scale-105"
+                        alt="Sri Lanka"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-transparent to-slate-50 z-10"></div>
+                    <div className="absolute inset-0 bg-gradient-to-b from-slate-900/80 via-slate-900/40 to-[#f8fafc] z-10" />
                 </div>
-                <div className="relative z-20 text-center space-y-4 px-6">
-                    <h1 className="text-4xl md:text-7xl font-black text-white tracking-tight">Smart <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-orange-400 to-red-500">Planner</span></h1>
-                    <p className="text-slate-200 text-sm md:text-xl font-light max-w-2xl mx-auto tracking-wide leading-relaxed">Your island journey architect, now with memory.</p>
+                
+                <div className="relative z-20 text-center space-y-6 px-6 max-w-4xl animate-in fade-in zoom-in duration-1000">
+                    <span className="bg-orange-500/20 text-orange-300 px-4 py-2 rounded-full text-xs font-black uppercase tracking-[0.2em] backdrop-blur-md border border-orange-500/30">
+                        CCTNS AI Framework
+                    </span>
+                    <h1 className="text-5xl md:text-8xl font-black text-white tracking-tighter">
+                        Smart <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 via-amber-200 to-yellow-400">Planner</span>
+                    </h1>
+                    <p className="text-slate-200 text-lg md:text-2xl font-light max-w-2xl mx-auto leading-relaxed opacity-90">
+                        Trustworthy travel guidance powered by cognitive nudging and real-time community feedback.
+                    </p>
                 </div>
             </div>
 
-            <div className="max-w-6xl mx-auto px-6 -mt-20 relative z-30 pb-20">
-                <div className="grid lg:grid-cols-12 gap-10">
+            <div className="max-w-7xl mx-auto px-6 -mt-32 relative z-30 pb-20">
+                <div className="grid lg:grid-cols-12 gap-8">
 
-                    {/* INPUT PANEL */}
+                    {/* --- 🖋️ PREMIUM INPUT PANEL --- */}
                     <div className="lg:col-span-4">
-                        <div className="bg-white/90 backdrop-blur-2xl p-8 rounded-[2.5rem] border border-white shadow-2xl sticky top-28">
-                            <div className="flex justify-between items-center mb-6">
-                                <h2 className="text-xl font-black flex items-center gap-2">
-                                    <span className="bg-yellow-400 p-2 rounded-xl text-lg shadow-sm">🖋️</span> Details
-                                </h2>
-                                <button onClick={handleReset} className="text-[10px] font-black text-red-500 uppercase hover:underline">Reset</button>
+                        <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.05)] overflow-hidden sticky top-28">
+                            <div className="bg-slate-900 px-8 py-6 flex justify-between items-center">
+                                <div>
+                                    <h2 className="text-white text-xl font-black tracking-tight flex items-center gap-2">
+                                        <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span> Analysis
+                                    </h2>
+                                    <p className="text-slate-400 text-[10px] uppercase font-bold tracking-widest mt-0.5">CCTNS Engine</p>
+                                </div>
+                                <button onClick={handleReset} className="bg-white/10 hover:bg-red-500/20 text-white/70 px-3 py-1.5 rounded-xl transition-all border border-white/10">
+                                    <span className="text-[10px] font-black uppercase tracking-tighter">Reset</span>
+                                </button>
                             </div>
-                            <form onSubmit={handleGenerate} className="space-y-6">
+
+                            <form onSubmit={handleGenerate} className="p-8 space-y-7">
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Destination</label>
-                                    <input name="location" value={formData.location} placeholder="e.g. Ella" className="w-full p-4 bg-slate-100/50 rounded-2xl border-none font-bold text-sm focus:ring-2 focus:ring-orange-400 outline-none transition-all" onChange={handleChange} required />
+                                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-[0.15em] ml-1">Destination</label>
+                                    <input name="location" value={formData.location} placeholder="e.g. Ella or Mirissa" className="w-full p-4 bg-slate-50 rounded-2xl border-2 border-transparent focus:border-orange-500/20 focus:bg-white font-bold text-sm outline-none transition-all" onChange={handleChange} required />
                                 </div>
+
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Duration (Days)</label>
-                                    <input name="duration" type="number" value={formData.duration} placeholder="Days" className="w-full p-4 bg-slate-100/50 rounded-2xl border-none font-bold text-sm focus:ring-2 focus:ring-orange-400 outline-none transition-all" onChange={handleChange} required />
+                                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-[0.15em] ml-1">Duration</label>
+                                    <div className="relative">
+                                        <input name="duration" type="number" value={formData.duration} placeholder="0" className="w-full p-4 bg-slate-50 rounded-2xl border-2 border-transparent focus:border-blue-500/20 focus:bg-white font-bold text-sm outline-none transition-all" onChange={handleChange} required />
+                                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-400 uppercase tracking-widest">Days</span>
+                                    </div>
                                 </div>
+
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Preferences</label>
-                                    <textarea name="preferences" value={formData.preferences} placeholder="Vegan, Luxury, Hiking..." className="w-full p-4 bg-slate-100/50 rounded-2xl border-none font-bold h-28 text-sm focus:ring-2 focus:ring-orange-400 outline-none transition-all" onChange={handleChange}></textarea>
+                                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-[0.15em] ml-1">Preferences</label>
+                                    <textarea name="preferences" value={formData.preferences} placeholder="Vegan meals, Safety first, Local tips..." className="w-full p-4 bg-slate-100/50 rounded-2xl border-none font-bold h-32 text-sm focus:ring-2 focus:ring-orange-400 outline-none transition-all resize-none" onChange={handleChange} />
                                 </div>
-                                <button type="submit" disabled={loading} className="w-full bg-slate-900 text-white py-5 rounded-2xl font-black shadow-xl hover:bg-orange-500 transition-all transform active:scale-95 disabled:bg-slate-300">
-                                    {loading ? "AI is Thinking..." : "Create My Journey"}
+
+                                <button type="submit" disabled={loading} className="w-full bg-slate-900 text-white py-5 rounded-2xl font-black uppercase tracking-widest hover:bg-orange-500 transition-all shadow-xl disabled:bg-slate-300">
+                                    {loading ? "Cognitive Analysis..." : "Generate Guided Plan"}
                                 </button>
                             </form>
                         </div>
                     </div>
 
-                    {/* RESULT PANEL */}
+                    {/* --- RIGHT: RESULT PANEL --- */}
                     <div className="lg:col-span-8">
                         {itinerary ? (
-                            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-10 duration-700">
-                                <div className="bg-white p-10 md:p-14 rounded-[3.5rem] border border-white shadow-2xl relative overflow-hidden">
-                                    <div className="relative z-10">
-                                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-10 pb-6 border-b border-slate-100">
-                                            <h2 className="text-2xl font-black tracking-tight text-slate-800">Your Escape Plan</h2>
-                                            <div className="flex flex-wrap gap-2">
-                                                <button onClick={handleSavePlan} disabled={saving} className="bg-blue-600 text-white px-5 py-3 rounded-2xl text-[10px] font-black hover:bg-blue-700 transition shadow-lg disabled:bg-blue-300">
-                                                    {saving ? "SAVING..." : "💾 SAVE"}
-                                                </button>
-                                                <button onClick={shareOnWhatsApp} className="bg-emerald-500 text-white px-5 py-3 rounded-2xl text-[10px] font-black hover:bg-emerald-600 transition shadow-lg">
-                                                    💬 SHARE
-                                                </button>
-                                                <button onClick={downloadPDF} className="bg-slate-900 text-white px-5 py-3 rounded-2xl text-[10px] font-black hover:bg-orange-500 transition shadow-lg">
-                                                    📄 PDF
-                                                </button>
-                                            </div>
+                            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-10 duration-1000">
+                                <div className="bg-white p-8 md:p-16 rounded-[3.5rem] border border-white shadow-[0_20px_60px_rgba(0,0,0,0.03)] relative overflow-hidden">
+                                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12 pb-8 border-b border-slate-100">
+                                        <div>
+                                            <h2 className="text-3xl font-black tracking-tight text-slate-800">Your Trusted Journey</h2>
+                                            <p className="text-emerald-600 text-[10px] font-black uppercase mt-1 flex items-center gap-1">
+                                                <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping"></span> Real-time Reputation Recalibrated
+                                            </p>
                                         </div>
-                                        <div className="prose prose-slate max-w-none prose-headings:font-black prose-headings:text-slate-900 prose-p:font-medium prose-p:text-slate-600 prose-li:font-bold prose-img:rounded-[2rem] prose-img:shadow-lg leading-relaxed">
-                                            {/* ✅ Custom Components භාවිතා කිරීම */}
-                                            <ReactMarkdown components={MarkdownComponents}>{itinerary}</ReactMarkdown>
+                                        <div className="flex flex-wrap gap-3">
+                                            <button onClick={handleSavePlan} disabled={saving} className="bg-blue-50 text-blue-600 px-6 py-3 rounded-2xl text-[10px] font-black uppercase hover:bg-blue-600 hover:text-white transition-all shadow-sm active:scale-95 disabled:bg-slate-100">
+                                                {saving ? "SAVING..." : "💾 SAVE"}
+                                            </button>
+                                            <button onClick={shareOnWhatsApp} className="bg-emerald-50 text-emerald-600 px-6 py-3 rounded-2xl text-[10px] font-black uppercase hover:bg-emerald-600 hover:text-white transition-all shadow-sm active:scale-95">
+                                                💬 SHARE
+                                            </button>
+                                            <button onClick={downloadPDF} className="bg-slate-900 text-white px-6 py-3 rounded-2xl text-[10px] font-black uppercase hover:bg-orange-500 transition-all shadow-xl active:scale-95">
+                                                📄 PDF
+                                            </button>
                                         </div>
+                                    </div>
+                                    <div className="prose prose-slate max-w-none prose-headings:font-black prose-p:text-lg prose-img:rounded-[2.5rem] prose-img:shadow-2xl prose-img:my-10 prose-blockquote:border-none prose-blockquote:p-0">
+                                        <ReactMarkdown components={MarkdownComponents}>{itinerary}</ReactMarkdown>
                                     </div>
                                 </div>
                             </div>
                         ) : (
-                            <div className="bg-white/40 backdrop-blur-md border-2 border-dashed border-slate-200 h-[500px] rounded-[3rem] flex flex-col items-center justify-center text-center p-10 shadow-inner">
-                                <span className="text-5xl mb-6 animate-bounce">✨</span>
-                                <h3 className="text-2xl font-black text-slate-800 tracking-tight">Your island plan starts here</h3>
-                                <p className="text-slate-400 mt-2 font-medium">Fill in the details to generate a custom itinerary.</p>
+                            <div className="bg-white/40 backdrop-blur-md border-2 border-dashed border-slate-200 h-[600px] rounded-[3rem] flex flex-col items-center justify-center text-center p-12">
+                                <div className="w-20 h-20 bg-white rounded-3xl shadow-xl flex items-center justify-center text-3xl mb-8 animate-pulse text-emerald-500">🛡️</div>
+                                <h3 className="text-2xl font-black text-slate-800 tracking-tight">CCTNS Engine Ready</h3>
+                                <p className="text-slate-400 mt-4 max-w-sm mx-auto font-medium">Enter your criteria to get an AI-nudged, community-verified travel plan.</p>
                             </div>
                         )}
                     </div>
                 </div>
             </div>
 
-            {/* --- 📄 PROFESSIONAL HIDDEN PDF TEMPLATE --- */}
+            {/* --- 📄 PDF TEMPLATE (STAY HIDDEN) --- */}
             <div id="printable-pdf-area" style={{ display: 'none', padding: '50px', backgroundColor: 'white' }}>
-                <div style={{ borderBottom: '5px solid #f97316', paddingBottom: '20px', marginBottom: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ borderBottom: '5px solid #10b981', paddingBottom: '30px', marginBottom: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
-                        <h1 style={{ margin: 0, fontSize: '36px', fontWeight: '900', color: '#1e293b' }}>LAK TRAVELERS</h1>
-                        <p style={{ margin: 0, fontSize: '12px', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 'bold', letterSpacing: '1px' }}>Personalized Island Itinerary</p>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                        <p style={{ margin: 0, fontSize: '12px', fontWeight: 'bold' }}>DATE: {new Date().toLocaleDateString()}</p>
-                        <p style={{ margin: 0, fontSize: '10px', color: '#cbd5e1' }}>PLAN ID: {Math.random().toString(36).substr(2, 9).toUpperCase()}</p>
+                        <h1 style={{ margin: 0, fontSize: '42px', fontWeight: '900', color: '#064e3b' }}>LAK TRAVELERS</h1>
+                        <p style={{ margin: 0, fontSize: '14px', color: '#059669', textTransform: 'uppercase', fontWeight: 'bold', letterSpacing: '2px' }}>CCTNS Trusted Travel Framework</p>
                     </div>
                 </div>
                 
-                <div style={{ backgroundColor: '#f8fafc', padding: '25px', borderRadius: '20px', marginBottom: '35px', border: '1px solid #e2e8f0' }}>
-                    <h3 style={{ margin: '0 0 10px 0', fontSize: '20px', color: '#0f172a', fontWeight: '900' }}>TRIP TO {formData.location?.toUpperCase()}</h3>
-                    <p style={{ margin: 0, fontSize: '14px', color: '#64748b', fontWeight: 'bold' }}>DURATION: {formData.duration} Days | TYPE: {formData.transportType} Transport</p>
-                    <p style={{ margin: '10px 0 0 0', fontSize: '12px', color: '#94a3b8', fontStyle: 'italic' }}>Notes: {formData.preferences || 'General exploration'}</p>
+                <div style={{ backgroundColor: '#f0fdf4', padding: '30px', borderRadius: '25px', marginBottom: '40px', border: '1px solid #d1fae5' }}>
+                    <h2 style={{ margin: '0 0 10px 0', fontSize: '24px', color: '#065f46', fontWeight: '900' }}>TRIP TO {formData.location?.toUpperCase()}</h2>
+                    <p style={{ margin: 0, fontSize: '16px', color: '#059669', fontWeight: 'bold' }}>{formData.duration} Days - AI Guided & Community Verified</p>
                 </div>
 
-                <div className="pdf-markdown-content" style={{ color: '#334155', lineHeight: '1.8', fontSize: '14px' }}>
+                <div className="pdf-markdown-content" style={{ color: '#334155', lineHeight: '1.8', fontSize: '16px' }}>
                     <ReactMarkdown>{itinerary}</ReactMarkdown>
-                </div>
-
-                <div style={{ marginTop: '60px', paddingTop: '25px', borderTop: '2px solid #f1f5f9', textAlign: 'center' }}>
-                    <p style={{ fontSize: '12px', fontWeight: 'bold', color: '#1e293b' }}>LAK TRAVELERS SMART PLANNER AI</p>
-                    <p style={{ fontSize: '10px', color: '#94a3b8', marginTop: '5px' }}>Explore the beauty of Sri Lanka with our intelligent planning system. | www.laktravelers.lk</p>
                 </div>
             </div>
         </div>
