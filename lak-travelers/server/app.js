@@ -20,8 +20,7 @@ const app = express();
 const __dirname = path.resolve();
 
 /**
- * 🚀 1. ඉතාම වැදගත්: Body Parser Limits
- * Base64 පින්තූර නිවැරදිව ලබා ගැනීමට මෙහි limit එක 10mb ලෙස සැකසිය යුතුය.
+ * 🚀 1. Body Parser Limits
  */
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
@@ -38,18 +37,23 @@ if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
 }
 
-// CORS Configuration
+/**
+ * 🌐 2. CORS Configuration (නිවැරදි කරන ලදී)
+ */
 const allowedOrigins = [
   'http://localhost:5173',
-  'https://lak-travelers-z1uk.vercel.app'
+  'https://lak-travelers.vercel.app',    // ඔබේ ප්‍රධාන Vercel ලින්ක් එක
+  'https://lak-travelers-z1uk.vercel.app' // අමතර ලින්ක් එක
 ];
 
 app.use(cors({
   origin: function (origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
+    // origin නැති අවස්ථා (Mobile apps හෝ Postman) සහ ලැයිස්තුවේ ඇති ලින්ක් වලට අවසර දීම
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
-      callback(new Error('CORS Policy Error'), false);
+      console.log("Blocked by CORS:", origin); // කුමන ලින්ක් එකද Block වුණේ කියා බලා ගැනීමට
+      callback(new Error('CORS Policy Error'));
     }
   },
   credentials: true,
@@ -59,7 +63,7 @@ app.use(cors({
 }));
 
 /**
- * 🛠️ 2. API Routes
+ * 🛠️ 3. API Routes
  */
 app.use('/api/users', userRoutes);
 app.use('/api/hotels', hotelRoutes);
@@ -78,7 +82,7 @@ app.get('/', (req, res) => {
 });
 
 /**
- * 🚨 3. Error Handling Middleware
+ * 🚨 4. Error Handling Middleware
  */
 app.use(notFound);
 app.use(errorHandler);
