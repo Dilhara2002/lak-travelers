@@ -25,13 +25,19 @@ export const sendOTP = asyncHandler(async (req, res) => {
     throw new Error('User already exists');
   }
 
-  const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-    },
-  });
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  host: 'smtp.gmail.com',
+  port: 465,
+  secure: true, // Port 465 සඳහා true භාවිතා කරන්න
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS, // මෙතැනට අනිවාර්යයෙන්ම Gmail "App Password" එකක් තිබිය යුතුයි
+  },
+  tls: {
+    rejectUnauthorized: false // බොහෝ විට Timeout ප්‍රශ්න විසඳීමට මෙය උදව් වේ
+  }
+});
 
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
   otpStore[email] = { otp, expires: Date.now() + 600000 }; // 10 min expiry
