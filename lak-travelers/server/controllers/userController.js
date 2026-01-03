@@ -30,20 +30,21 @@ export const sendOTP = asyncHandler(async (req, res) => {
     throw new Error('User already exists');
   }
 
-  // ✅ Nodemailer Transporter - Timeout ගැටලුව සඳහා උපරිම ආරක්ෂිත සැකසුම්
   const transporter = nodemailer.createTransport({
     host: 'smtp.gmail.com',
     port: 465,
-    secure: true, 
+    secure: true, // Port 465 සඳහා true විය යුතුය
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS, 
     },
-    connectionTimeout: 5000, // තත්පර 5 කින් පසු නතර කරන්න
-    greetingTimeout: 5000,
-    socketTimeout: 5000,
+    connectionTimeout: 10000, // තත්පර 10 කින් පසු නතර කරන්න
+    socketTimeout: 10000,
+    greetingTimeout: 10000,
     tls: {
-      rejectUnauthorized: false
+      // මෙය Render වැනි cloud සර්වර් වලදී timeout වීම වළක්වයි
+      rejectUnauthorized: false,
+      minVersion: "TLSv1.2"
     }
   });
 
