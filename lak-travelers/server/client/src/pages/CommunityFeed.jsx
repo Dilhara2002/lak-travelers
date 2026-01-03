@@ -18,15 +18,15 @@ const CommunityFeed = () => {
   // පවතින අත්දැකීම් ලබා ගැනීම (Fetch Experiences)
   const fetchReviews = async () => {
     try {
-      const { data } = await axios.get("http://localhost:5001/api/reviews/all");
-      setReviews(data.reviews);
+      // මෙතැන API_URL එක නිවැරදිව භාවිතා කර ඇත
+      const { data } = await axios.get(`${API_URL}/api/reviews`);
+      setReviews(data.reviews || data); 
     } catch (err) {
       toast.error("Failed to load community insights.");
     } finally {
       setLoading(false);
     }
   };
-
   useEffect(() => {
     fetchReviews();
   }, []);
