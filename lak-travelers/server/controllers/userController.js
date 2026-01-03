@@ -7,7 +7,7 @@ import Vehicle from '../models/Vehicle.js';
 import generateToken from '../utils/generateToken.js';
 import nodemailer from 'nodemailer';
 
-// Temporary store for OTP (consider using Redis for production)
+// Temporary store for OTP (Consider Redis for production)
 let otpStore = {};
 
 /**
@@ -25,19 +25,22 @@ export const sendOTP = asyncHandler(async (req, res) => {
     throw new Error('User already exists');
   }
 
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  host: 'smtp.gmail.com',
-  port: 465,
-  secure: true, // Port 465 සඳහා true භාවිතා කරන්න
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS, // මෙතැනට අනිවාර්යයෙන්ම Gmail "App Password" එකක් තිබිය යුතුයි
-  },
-  tls: {
-    rejectUnauthorized: false // බොහෝ විට Timeout ප්‍රශ්න විසඳීමට මෙය උදව් වේ
-  }
-});
+  // ✅ Nodemailer Transporter එක යාවත්කාලීන කරන ලදී (Timeout ගැටලුව සඳහා)
+  const transporter = nodemailer.createTransport({
+    host: 'smtp.gmail.com',
+    port: 465, // 587 වෙනුවට 465 වඩාත් ස්ථාවරයි
+    secure: true, 
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS, // Gmail App Password එක භාවිතා කරන්න
+    },
+    // Timeout වැළැක්වීමට අමතර සැකසුම්
+    connectionTimeout: 10000, 
+    greetingTimeout: 10000,
+    tls: {
+      rejectUnauthorized: false
+    }
+  });
 
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
   otpStore[email] = { otp, expires: Date.now() + 600000 }; // 10 min expiry
@@ -46,11 +49,24 @@ const transporter = nodemailer.createTransport({
     from: `"Lak Travelers" <${process.env.EMAIL_USER}>`,
     to: email,
     subject: 'Verification Code - Lak Travelers',
-    html: `<h3>Your OTP is: <b>${otp}</b></h3>`,
+    html: `
+      <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+        <h2 style="color: #1a73e8;">Lak Travelers Verification</h2>
+        <p>Your verification code is:</p>
+        <h1 style="background: #f1f3f4; padding: 10px; display: inline-block; letter-spacing: 5px; color: #333;">${otp}</h1>
+        <p>This code will expire in 10 minutes.</p>
+      </div>
+    `,
   };
 
-  await transporter.sendMail(mailOptions);
-  res.status(200).json({ message: 'OTP sent successfully!' });
+  try {
+    await transporter.sendMail(mailOptions);
+    res.status(200).json({ message: 'OTP sent successfully!' });
+  } catch (error) {
+    console.error("Nodemailer Error:", error);
+    res.status(500);
+    throw new Error('Failed to send email. Check your email credentials.');
+  }
 });
 
 /**
@@ -84,7 +100,6 @@ export const registerUser = asyncHandler(async (req, res) => {
 
   if (user) {
     delete otpStore[email];
-    // Set cookie and get token string
     const token = generateToken(res, user._id);
 
     res.status(201).json({
@@ -93,7 +108,7 @@ export const registerUser = asyncHandler(async (req, res) => {
       email: user.email,
       role: user.role,
       isApproved: user.isApproved,
-      token: token, // Returned for frontend localStorage
+      token: token,
     });
   } else {
     res.status(400);
@@ -108,20 +123,17 @@ export const registerUser = asyncHandler(async (req, res) => {
  */
 export const authUser = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
-
   const user = await User.findOne({ email });
 
   if (user && (await user.matchPassword(password))) {
-    // Set cookie and get token string
     const token = generateToken(res, user._id);
-
     res.json({
       _id: user._id,
       name: user.name,
       email: user.email,
       role: user.role,
       isApproved: user.isApproved,
-      token: token, // Returned for frontend localStorage
+      token: token,
     });
   } else {
     res.status(401);
@@ -130,9 +142,7 @@ export const authUser = asyncHandler(async (req, res) => {
 });
 
 /**
- * @desc    Logout user / clear cookie
- * @route   POST /api/users/logout
- * @access  Public
+ * @desc    Logout user
  */
 export const logoutUser = (req, res) => {
   res.cookie('jwt', '', { httpOnly: true, expires: new Date(0) });
@@ -141,8 +151,6 @@ export const logoutUser = (req, res) => {
 
 /**
  * @desc    Get user profile
- * @route   GET /api/users/profile
- * @access  Private
  */
 export const getUserProfile = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id).select('-password');
@@ -156,47 +164,39 @@ export const getUserProfile = asyncHandler(async (req, res) => {
 
 /**
  * @desc    Update user profile
- * @route   PUT /api/users/profile
- * @access  Private
  */
 export const updateUserProfile = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id);
 
-  if (!user) {
+  if (user) {
+    user.name = req.body.name || user.name;
+    user.email = req.body.email || user.email;
+    if (req.body.profileImage) user.profileImage = req.body.profileImage;
+    if (req.body.password) user.password = req.body.password;
+
+    const updatedUser = await user.save();
+    res.json({
+      _id: updatedUser._id,
+      name: updatedUser.name,
+      email: updatedUser.email,
+      role: updatedUser.role,
+      profileImage: updatedUser.profileImage,
+    });
+  } else {
     res.status(404);
     throw new Error('User not found');
   }
-
-  user.name = req.body.name || user.name;
-  user.email = req.body.email || user.email;
-  if (req.body.profileImage) user.profileImage = req.body.profileImage;
-  if (req.body.password) user.password = req.body.password;
-
-  const updatedUser = await user.save();
-
-  res.json({
-    _id: updatedUser._id,
-    name: updatedUser.name,
-    email: updatedUser.email,
-    role: updatedUser.role,
-    profileImage: updatedUser.profileImage,
-  });
 });
 
 /**
- * @desc    Apply to be a Vendor
- * @route   PUT /api/users/vendor-profile
- * @access  Private
+ * @desc    Update Vendor Profile
  */
 export const updateVendorProfile = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id);
-  if (!user) { 
-    res.status(404); 
-    throw new Error('User not found'); 
-  }
+  if (!user) { res.status(404); throw new Error('User not found'); }
 
   user.vendorDetails = { ...user.vendorDetails, ...req.body };
-  user.isApproved = false;
+  user.isApproved = false; // Requires re-approval if details changed
   user.role = 'vendor';
 
   const updatedUser = await user.save();
@@ -204,42 +204,33 @@ export const updateVendorProfile = asyncHandler(async (req, res) => {
 });
 
 /**
- * @desc    Get all pending vendors
- * @route   GET /api/users/pending
- * @access  Private/Admin
+ * @desc    Admin: Get all pending vendors
  */
 export const getPendingVendors = asyncHandler(async (req, res) => {
-  const vendors = await User.find({ role: 'vendor', isApproved: false })
-    .select('-password');
+  const vendors = await User.find({ role: 'vendor', isApproved: false }).select('-password');
   res.json(vendors);
 });
 
 /**
- * @desc    Approve a vendor
- * @route   PUT /api/users/approve/:id
- * @access  Private/Admin
+ * @desc    Admin: Approve vendor
  */
 export const approveVendor = asyncHandler(async (req, res) => {
   const user = await User.findById(req.params.id);
-
-  if (!user) {
+  if (user) {
+    user.isApproved = true;
+    await user.save();
+    res.json({ message: 'Vendor approved successfully' });
+  } else {
     res.status(404);
     throw new Error('User not found');
   }
-
-  user.isApproved = true;
-  await user.save();
-  res.json({ message: 'Vendor approved successfully' });
 });
 
 /**
- * @desc    Reject and delete vendor request
- * @route   DELETE /api/users/reject/:id
- * @access  Private/Admin
+ * @desc    Admin: Reject vendor
  */
 export const rejectVendor = asyncHandler(async (req, res) => {
   const user = await User.findById(req.params.id);
-
   if (user && user.role === 'vendor') {
     await User.findByIdAndDelete(req.params.id);
     res.json({ message: 'Vendor request rejected and account removed' });
@@ -250,17 +241,15 @@ export const rejectVendor = asyncHandler(async (req, res) => {
 });
 
 /**
- * @desc    Admin manually creates a User or Vendor
- * @route   POST /api/users/admin/create
- * @access  Private/Admin
+ * @desc    Admin: Create User
  */
 export const adminCreateUser = asyncHandler(async (req, res) => {
   const { name, email, password, role, isApproved } = req.body;
-
   const userExists = await User.findOne({ email });
+
   if (userExists) {
     res.status(400);
-    throw new Error('User already exists with this email');
+    throw new Error('User already exists');
   }
 
   const user = await User.create({
@@ -280,26 +269,17 @@ export const adminCreateUser = asyncHandler(async (req, res) => {
 });
 
 /**
- * @desc    Admin updates any User or Vendor details
- * @route   PUT /api/users/admin/update/:id
- * @access  Private/Admin
+ * @desc    Admin: Update User
  */
 export const adminUpdateUser = asyncHandler(async (req, res) => {
   const user = await User.findById(req.params.id);
-
   if (user) {
     user.name = req.body.name || user.name;
     user.email = req.body.email || user.email;
     user.role = req.body.role || user.role;
     user.isApproved = req.body.isApproved !== undefined ? req.body.isApproved : user.isApproved;
-
-    if (req.body.vendorDetails) {
-      user.vendorDetails = { ...user.vendorDetails, ...req.body.vendorDetails };
-    }
-
-    if (req.body.password) {
-      user.password = req.body.password;
-    }
+    if (req.body.vendorDetails) user.vendorDetails = { ...user.vendorDetails, ...req.body.vendorDetails };
+    if (req.body.password) user.password = req.body.password;
 
     const updatedUser = await user.save();
     res.json(updatedUser);
@@ -310,17 +290,12 @@ export const adminUpdateUser = asyncHandler(async (req, res) => {
 });
 
 /**
- * @desc    Admin deletes any User or Vendor
- * @route   DELETE /api/users/admin/:id
- * @access  Private/Admin
+ * @desc    Admin: Delete User
  */
 export const adminDeleteUser = asyncHandler(async (req, res) => {
   const user = await User.findById(req.params.id);
   if (user) {
-    if (user.role === 'admin') {
-      res.status(400);
-      throw new Error('Cannot delete an admin user');
-    }
+    if (user.role === 'admin') { res.status(400); throw new Error('Cannot delete admin'); }
     await User.findByIdAndDelete(req.params.id);
     res.json({ message: 'User deleted successfully' });
   } else {
@@ -330,9 +305,7 @@ export const adminDeleteUser = asyncHandler(async (req, res) => {
 });
 
 /**
- * @desc    Get all users for Admin
- * @route   GET /api/users/admin/all
- * @access  Private/Admin
+ * @desc    Admin: Get all users
  */
 export const getUsers = asyncHandler(async (req, res) => {
   const users = await User.find({}).select('-password');
@@ -340,9 +313,7 @@ export const getUsers = asyncHandler(async (req, res) => {
 });
 
 /**
- * @desc    Get system-wide statistics for dashboard
- * @route   GET /api/users/admin-stats
- * @access  Private/Admin
+ * @desc    Admin: Get dashboard statistics
  */
 export const getAdminStats = asyncHandler(async (req, res) => {
   const usersCount = await User.countDocuments({ role: 'user' });
