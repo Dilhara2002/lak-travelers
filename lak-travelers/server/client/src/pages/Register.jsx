@@ -14,11 +14,11 @@ const Register = () => {
     password: '',
     confirmPassword: '',
     role: 'user',
-    otp: '', // OTP එක සඳහා අලුත් field එකක්
+    otp: '', 
   });
 
   const [isLoading, setIsLoading] = useState(false);
-  const [isOtpSent, setIsOtpSent] = useState(false); // OTP යවා ඇතිදැයි බැලීමට
+  const [isOtpSent, setIsOtpSent] = useState(false); 
 
   const userInfo = useMemo(() => {
     const saved = localStorage.getItem('userInfo');
@@ -53,6 +53,7 @@ const Register = () => {
 
   /**
    * 📧 1. OTP එක Email එකට යැවීමේ ක්‍රියාවලිය
+   * මෙහිදී /api/users/send-otp ලෙස ලිපිනය නිවැරදි කර ඇත.
    */
   const handleSendOtp = async (e) => {
     e.preventDefault();
@@ -65,8 +66,8 @@ const Register = () => {
 
     setIsLoading(true);
     try {
-      // Backend එකේ අපි හැදූ /send-otp route එකට email එක යැවීම
-      await API.post('/users/send-otp', { email: email.trim().toLowerCase() });
+      // ✅ නිවැරදි කළ ලිපිනය: /api/users/send-otp
+      await API.post('/api/users/send-otp', { email: email.trim().toLowerCase() });
       setIsOtpSent(true);
       toast.success('Verification code sent to your email! 📩');
     } catch (error) {
@@ -78,6 +79,7 @@ const Register = () => {
 
   /**
    * 🚀 2. OTP එක Verify කර Register වීමේ ක්‍රියාවලිය
+   * මෙහිදී /api/users ලෙස ලිපිනය නිවැරදි කර ඇත.
    */
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -90,13 +92,13 @@ const Register = () => {
 
     setIsLoading(true);
     try {
-      // Backend එකේ registerUser function එකට දැන් OTP එකත් යවනවා
-      const { data } = await API.post('/users', {
+      // ✅ නිවැරදි කළ ලිපිනය: /api/users
+      const { data } = await API.post('/api/users', {
         name: name.trim(),
         email: email.trim().toLowerCase(),
         password,
         role,
-        otp, // OTP කේතය මෙහිදී යවයි
+        otp, 
       });
 
       localStorage.setItem('userInfo', JSON.stringify(data));
@@ -133,7 +135,6 @@ const Register = () => {
 
           <form onSubmit={isOtpSent ? handleSubmit : handleSendOtp} className="space-y-6">
             {!isOtpSent ? (
-              // STEP 1: Details Input
               <>
                 <div>
                   <label className="block text-xs font-black text-slate-400 mb-3 uppercase tracking-widest">Registering as:</label>
@@ -155,7 +156,6 @@ const Register = () => {
                 </button>
               </>
             ) : (
-              // STEP 2: OTP Verification
               <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <input
                   type="text"
