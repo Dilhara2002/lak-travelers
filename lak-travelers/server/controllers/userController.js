@@ -7,7 +7,7 @@ import Vehicle from '../models/Vehicle.js';
 import generateToken from '../utils/generateToken.js';
 import nodemailer from 'nodemailer';
 
-// Temporary store for OTP (Consider Redis for production)
+// OTP තාවකාලිකව ගබඩා කිරීමට (Consider Redis for production)
 let otpStore = {};
 
 /**
@@ -18,66 +18,73 @@ let otpStore = {};
 export const sendOTP = asyncHandler(async (req, res) => {
   const { email, isUpdate } = req.body;
 
-  const userExists = await User.findOne({ email });
+  if (!email) {
+    res.status(400);
+    throw new Error('Email is required');
+  }
+
+  const userExists = await User.findOne({ email: email.trim().toLowerCase() });
 
   if (!isUpdate && userExists) {
     res.status(400);
     throw new Error('User already exists');
   }
 
-  // ✅ Nodemailer Transporter එක යාවත්කාලීන කරන ලදී (Timeout ගැටලුව සඳහා)
+  // ✅ Nodemailer Transporter - Timeout ගැටලුව සඳහා උපරිම ආරක්ෂිත සැකසුම්
   const transporter = nodemailer.createTransport({
     host: 'smtp.gmail.com',
-    port: 465, // 587 වෙනුවට 465 වඩාත් ස්ථාවරයි
+    port: 465,
     secure: true, 
     auth: {
       user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS, // Gmail App Password එක භාවිතා කරන්න
+      pass: process.env.EMAIL_PASS, 
     },
-    // Timeout වැළැක්වීමට අමතර සැකසුම්
-    connectionTimeout: 10000, 
-    greetingTimeout: 10000,
+    connectionTimeout: 5000, // තත්පර 5 කින් පසු නතර කරන්න
+    greetingTimeout: 5000,
+    socketTimeout: 5000,
     tls: {
       rejectUnauthorized: false
     }
   });
 
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  otpStore[email] = { otp, expires: Date.now() + 600000 }; // 10 min expiry
+  otpStore[email.toLowerCase()] = { otp, expires: Date.now() + 600000 }; 
 
   const mailOptions = {
     from: `"Lak Travelers" <${process.env.EMAIL_USER}>`,
-    to: email,
+    to: email.toLowerCase(),
     subject: 'Verification Code - Lak Travelers',
     html: `
-      <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-        <h2 style="color: #1a73e8;">Lak Travelers Verification</h2>
-        <p>Your verification code is:</p>
-        <h1 style="background: #f1f3f4; padding: 10px; display: inline-block; letter-spacing: 5px; color: #333;">${otp}</h1>
-        <p>This code will expire in 10 minutes.</p>
+      <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px; max-width: 500px;">
+        <h2 style="color: #1a73e8; text-align: center;">Lak Travelers Verification</h2>
+        <p style="text-align: center;">Your verification code is:</p>
+        <div style="background: #f1f3f4; padding: 15px; text-align: center; border-radius: 8px;">
+          <h1 style="margin: 0; letter-spacing: 8px; color: #333; font-size: 32px;">${otp}</h1>
+        </div>
+        <p style="text-align: center; color: #777; font-size: 12px; margin-top: 20px;">This code will expire in 10 minutes.</p>
       </div>
     `,
   };
 
+  // ✅ Try-Catch භාවිතයෙන් සර්වර් එක Crash වීම වැළැක්වීම
   try {
     await transporter.sendMail(mailOptions);
     res.status(200).json({ message: 'OTP sent successfully!' });
   } catch (error) {
-    console.error("Nodemailer Error:", error);
+    console.error("🚨 Nodemailer Critical Error:", error.message);
     res.status(500);
-    throw new Error('Failed to send email. Check your email credentials.');
+    throw new Error('Email server connection timeout. Please try again in a moment.');
   }
 });
 
 /**
  * @desc    Verify OTP and register user
- * @route   POST /api/users
- * @access  Public
  */
 export const registerUser = asyncHandler(async (req, res) => {
   const { name, email, password, role, otp } = req.body;
 
-  const otpData = otpStore[email];
+  const emailKey = email.toLowerCase();
+  const otpData = otpStore[emailKey];
 
   if (!otpData || otpData.otp !== otp) {
     res.status(400);
@@ -85,23 +92,22 @@ export const registerUser = asyncHandler(async (req, res) => {
   }
 
   if (Date.now() > otpData.expires) {
-    delete otpStore[email];
+    delete otpStore[emailKey];
     res.status(400);
     throw new Error('OTP expired');
   }
 
   const user = await User.create({
-    name,
-    email,
+    name: name.trim(),
+    email: emailKey,
     password,
     role: role || 'user',
     isApproved: role === 'vendor' ? false : true,
   });
 
   if (user) {
-    delete otpStore[email];
+    delete otpStore[emailKey];
     const token = generateToken(res, user._id);
-
     res.status(201).json({
       _id: user._id,
       name: user.name,
@@ -118,12 +124,10 @@ export const registerUser = asyncHandler(async (req, res) => {
 
 /**
  * @desc    Authenticate user & get token
- * @route   POST /api/users/auth
- * @access  Public
  */
 export const authUser = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
-  const user = await User.findOne({ email });
+  const user = await User.findOne({ email: email.toLowerCase() });
 
   if (user && (await user.matchPassword(password))) {
     const token = generateToken(res, user._id);
@@ -170,7 +174,7 @@ export const updateUserProfile = asyncHandler(async (req, res) => {
 
   if (user) {
     user.name = req.body.name || user.name;
-    user.email = req.body.email || user.email;
+    user.email = (req.body.email || user.email).toLowerCase();
     if (req.body.profileImage) user.profileImage = req.body.profileImage;
     if (req.body.password) user.password = req.body.password;
 
@@ -196,7 +200,7 @@ export const updateVendorProfile = asyncHandler(async (req, res) => {
   if (!user) { res.status(404); throw new Error('User not found'); }
 
   user.vendorDetails = { ...user.vendorDetails, ...req.body };
-  user.isApproved = false; // Requires re-approval if details changed
+  user.isApproved = false; 
   user.role = 'vendor';
 
   const updatedUser = await user.save();
@@ -233,7 +237,7 @@ export const rejectVendor = asyncHandler(async (req, res) => {
   const user = await User.findById(req.params.id);
   if (user && user.role === 'vendor') {
     await User.findByIdAndDelete(req.params.id);
-    res.json({ message: 'Vendor request rejected and account removed' });
+    res.json({ message: 'Vendor request rejected' });
   } else {
     res.status(404);
     throw new Error('Vendor not found');
@@ -245,7 +249,7 @@ export const rejectVendor = asyncHandler(async (req, res) => {
  */
 export const adminCreateUser = asyncHandler(async (req, res) => {
   const { name, email, password, role, isApproved } = req.body;
-  const userExists = await User.findOne({ email });
+  const userExists = await User.findOne({ email: email.toLowerCase() });
 
   if (userExists) {
     res.status(400);
@@ -254,7 +258,7 @@ export const adminCreateUser = asyncHandler(async (req, res) => {
 
   const user = await User.create({
     name,
-    email,
+    email: email.toLowerCase(),
     password,
     role: role || 'user',
     isApproved: isApproved !== undefined ? isApproved : true,
@@ -275,7 +279,7 @@ export const adminUpdateUser = asyncHandler(async (req, res) => {
   const user = await User.findById(req.params.id);
   if (user) {
     user.name = req.body.name || user.name;
-    user.email = req.body.email || user.email;
+    user.email = (req.body.email || user.email).toLowerCase();
     user.role = req.body.role || user.role;
     user.isApproved = req.body.isApproved !== undefined ? req.body.isApproved : user.isApproved;
     if (req.body.vendorDetails) user.vendorDetails = { ...user.vendorDetails, ...req.body.vendorDetails };
