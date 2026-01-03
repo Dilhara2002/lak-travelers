@@ -32,19 +32,15 @@ export const sendOTP = asyncHandler(async (req, res) => {
 
   const transporter = nodemailer.createTransport({
     host: 'smtp.gmail.com',
-    port: 465,
-    secure: true, // Port 465 සඳහා true විය යුතුය
+    port: 587, // 465 වෙනුවට 587 උත්සාහ කරමු
+    secure: false, // 587 සඳහා මෙය false විය යුතුයි
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS, 
     },
-    connectionTimeout: 10000, // තත්පර 10 කින් පසු නතර කරන්න
-    socketTimeout: 10000,
-    greetingTimeout: 10000,
+    connectionTimeout: 15000, // කාලය තත්පර 15ක් දක්වා වැඩි කරන්න
     tls: {
-      // මෙය Render වැනි cloud සර්වර් වලදී timeout වීම වළක්වයි
-      rejectUnauthorized: false,
-      minVersion: "TLSv1.2"
+      rejectUnauthorized: false
     }
   });
 
