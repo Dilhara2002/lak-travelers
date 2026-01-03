@@ -26,7 +26,7 @@ const app = express();
  * මෙහිදී cors() මඟින්ම OPTIONS (pre-flight) requests හසුරුවයි.
  */
 app.use(cors({
-  origin: 'http://localhost:5173', 
+  origin: ['https://lak-travelers.vercel.app', 'http://localhost:5173'], 
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept"]
