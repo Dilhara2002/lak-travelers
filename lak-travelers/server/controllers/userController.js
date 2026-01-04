@@ -30,22 +30,25 @@ export const sendOTP = asyncHandler(async (req, res) => {
     throw new Error('User already exists');
   }
 
-const transporter = nodemailer.createTransport({
+// ✅ වඩාත් ස්ථාවර Nodemailer Transporter සැකසුම
+  const transporter = nodemailer.createTransport({
     host: 'smtp.gmail.com',
     port: 587,
-    secure: false, // Port 587 සඳහා මෙය සැමවිටම false විය යුතුය
+    secure: false, // Port 587 සඳහා මෙය false විය යුතුය
     auth: {
       user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS.replace(/\s/g, ''), // App Password එකේ හිස්තැන් ඇත්නම් ඉවත් කරයි
+      pass: process.env.EMAIL_PASS.replace(/\s/g, ''), // Password එකේ හිස්තැන් ඇත්නම් ඉවත් කරයි
     },
-    // Timeout ගැටලුව මඟහරවා ගැනීමට කාලය වැඩි කිරීම
-    connectionTimeout: 20000, 
+    connectionTimeout: 20000, // තත්පර 20ක් දක්වා කාලය වැඩි කරන ලදී
     socketTimeout: 30000,
     greetingTimeout: 20000,
     tls: {
-      rejectUnauthorized: false // Cloud සර්වර් වලදී මෙය අත්‍යවශ්‍ය වේ
+      rejectUnauthorized: false, // Cloud environment වලදී මෙය අත්‍යවශ්‍ය වේ
+      minVersion: "TLSv1.2"
     }
   });
+
+  
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
   otpStore[email.toLowerCase()] = { otp, expires: Date.now() + 600000 }; 
 
