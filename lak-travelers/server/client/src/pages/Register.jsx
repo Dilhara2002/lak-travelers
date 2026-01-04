@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import API from '../services/api';
+import API from '../services/api'; // ඔබගේ api.js සේවාව
 import { toast } from 'react-toastify';
 import registerImage from '../assets/Register.jpg';
 
@@ -20,6 +20,7 @@ const Register = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isOtpSent, setIsOtpSent] = useState(false); 
 
+  // දැනට ලොග් වී ඇති පරිශීලක තොරතුරු පරීක්ෂාව
   const userInfo = useMemo(() => {
     const saved = localStorage.getItem('userInfo');
     return saved ? JSON.parse(saved) : null;
@@ -29,6 +30,7 @@ const Register = () => {
     window.scrollTo(0, 0);
   }, []);
 
+  // URL එකෙන් ලැබෙන Role එක (උදා: ?role=vendor) සැකසීම
   useEffect(() => {
     const queryParams = new URLSearchParams(location.search);
     const roleFromUrl = queryParams.get('role');
@@ -37,6 +39,7 @@ const Register = () => {
     }
   }, [location]);
 
+  // ලොග් වී සිටී නම් Redirect කිරීම
   useEffect(() => {
     if (userInfo) {
       if (userInfo.role === 'vendor' && !userInfo.isApproved) {
@@ -53,7 +56,6 @@ const Register = () => {
 
   /**
    * 📧 1. OTP එක Email එකට යැවීමේ ක්‍රියාවලිය
-   * මෙහිදී /api කොටස ඉවත් කර ඇත, මන්ද එය දැනටමත් API service එකේ අඩංගු බැවිනි.
    */
   const handleSendOtp = async (e) => {
     e.preventDefault();
@@ -66,12 +68,12 @@ const Register = () => {
 
     setIsLoading(true);
     try {
-      // ✅ නිවැරදි කළ ලිපිනය: baseURL දැනටමත් /api ඇති නිසා '/users/send-otp' පමණක් ප්‍රමාණවත්ය.
+      // ✅ baseURL හි /api ඇති බැවින් '/users/send-otp' පමණක් භාවිතා කරන්න
       await API.post('/users/send-otp', { email: email.trim().toLowerCase() });
       setIsOtpSent(true);
       toast.success('Verification code sent to your email! 📩');
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to send OTP. Try again.');
+      toast.error(error.response?.data?.message || 'Failed to send OTP. Check Connection.');
     } finally {
       setIsLoading(false);
     }
@@ -91,7 +93,7 @@ const Register = () => {
 
     setIsLoading(true);
     try {
-      // ✅ නිවැරදි කළ ලිපිනය: '/users'
+      // ✅ baseURL හි /api ඇති බැවින් '/users' පමණක් භාවිතා කරන්න
       const { data } = await API.post('/users', {
         name: name.trim(),
         email: email.trim().toLowerCase(),
@@ -103,10 +105,10 @@ const Register = () => {
       localStorage.setItem('userInfo', JSON.stringify(data));
 
       if (data.role === 'vendor') {
-        toast.success('Verified & Vendor account created! 🏢');
+        toast.success('Verified! Now set up your profile. 🏢');
         navigate('/vendor-setup');
       } else {
-        toast.success('Email Verified! Welcome to LakTravelers! 🎉');
+        toast.success('Registration Successful! 🎉');
         navigate('/');
       }
       window.location.reload();
@@ -121,14 +123,14 @@ const Register = () => {
     <div className="min-h-screen flex items-start justify-center bg-gray-50 p-4 pt-10">
       <div className="bg-white rounded-[2rem] shadow-2xl overflow-hidden max-w-5xl w-full flex flex-col md:flex-row mt-4 border border-gray-100">
 
-        {/* LEFT: FORM SECTION */}
+        {/* වම් පස: FORM කොටස */}
         <div className="w-full md:w-1/2 p-8 md:p-14">
           <div className="mb-10">
             <h2 className="text-4xl font-black text-slate-900 mb-2 tracking-tight">
               {isOtpSent ? 'Verify Email 📧' : 'Create Account 🚀'}
             </h2>
             <p className="text-slate-500 font-medium">
-              {isOtpSent ? `Enter the 6-digit code sent to ${formData.email}` : 'Join LakTravelers and explore the beauty of Sri Lanka'}
+              {isOtpSent ? `Enter the code sent to ${formData.email}` : 'Join LakTravelers to explore Sri Lanka'}
             </p>
           </div>
 
@@ -138,8 +140,8 @@ const Register = () => {
                 <div>
                   <label className="block text-xs font-black text-slate-400 mb-3 uppercase tracking-widest">Registering as:</label>
                   <div className="grid grid-cols-2 gap-4">
-                    <button type="button" onClick={() => setFormData({ ...formData, role: 'user' })} className={`py-4 rounded-2xl font-bold border-2 transition-all duration-300 ${formData.role === 'user' ? 'bg-blue-600 text-white border-blue-600 shadow-xl scale-[1.02]' : 'bg-white border-slate-100 text-slate-500 hover:bg-slate-50'}`}>Traveler</button>
-                    <button type="button" onClick={() => setFormData({ ...formData, role: 'vendor' })} className={`py-4 rounded-2xl font-bold border-2 transition-all duration-300 ${formData.role === 'vendor' ? 'bg-slate-900 text-white border-slate-900 shadow-xl scale-[1.02]' : 'bg-white border-slate-100 text-slate-500 hover:bg-slate-50'}`}>Vendor</button>
+                    <button type="button" onClick={() => setFormData({ ...formData, role: 'user' })} className={`py-4 rounded-2xl font-bold border-2 transition-all duration-300 ${formData.role === 'user' ? 'bg-blue-600 text-white border-blue-600 shadow-xl scale-[1.02]' : 'bg-white border-slate-100 text-slate-500'}`}>Traveler</button>
+                    <button type="button" onClick={() => setFormData({ ...formData, role: 'vendor' })} className={`py-4 rounded-2xl font-bold border-2 transition-all duration-300 ${formData.role === 'vendor' ? 'bg-slate-900 text-white border-slate-900 shadow-xl scale-[1.02]' : 'bg-white border-slate-100 text-slate-500'}`}>Vendor</button>
                   </div>
                 </div>
 
@@ -159,7 +161,7 @@ const Register = () => {
                 <input
                   type="text"
                   name="otp"
-                  placeholder="Enter 6-digit OTP"
+                  placeholder="6-digit OTP"
                   value={formData.otp}
                   onChange={handleChange}
                   required
@@ -184,9 +186,9 @@ const Register = () => {
           </p>
         </div>
 
-        {/* RIGHT: IMAGE SECTION */}
+        {/* දකුණු පස: රූපය සහිත කොටස */}
         <div className="hidden md:block w-1/2 relative">
-          <img src={registerImage} alt="Sigiriya Sri Lanka" className="absolute inset-0 w-full h-full object-cover" />
+          <img src={registerImage} alt="Sri Lanka" className="absolute inset-0 w-full h-full object-cover" />
           <div className="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/20 to-transparent flex flex-col justify-end p-16 text-white">
             <h3 className="text-4xl font-black mb-4 leading-tight">Your Adventure<br/>Begins Here.</h3>
             <p className="text-slate-200 text-lg font-medium opacity-90 leading-relaxed">Join thousands of travelers exploring the paradise island of Sri Lanka. 🏝️</p>

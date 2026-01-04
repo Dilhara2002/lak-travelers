@@ -4,16 +4,19 @@ import axios from 'axios';
  * 🚀 API URL එක ස්වයංක්‍රීයව තීරණය කිරීම
  */
 const getBaseURL = () => {
-  // .env ගොනුවේ VITE_API_URL එකක් ඇත්නම් එය ප්‍රමුඛතාවය ගනී
+  // 1. .env ගොනුවේ VITE_API_URL එකක් ඇත්නම් එය භාවිතා කරයි
   if (import.meta.env.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL;
+    const url = import.meta.env.VITE_API_URL;
+    return url.endsWith('/api') ? url : `${url}/api`;
   }
   
-  // ඔබ ඉන්නේ localhost එකේ නම් 5001 port එකට සම්බන්ධ වේ
-  // නැතිනම් ඔබේ ස්ථිර Vercel Backend URL එකට සම්බන්ධ වේ
-  return window.location.hostname === "localhost" 
-    ? "http://localhost:5001/api" 
-    : "https://lak-travelers-api.vercel.app/api"; 
+  // 2. ඔබ localhost හි වැඩ කරන්නේ නම් 5001 ට සම්බන්ධ වේ
+  if (window.location.hostname === "localhost") {
+    return "http://localhost:5001/api";
+  }
+
+  // 3. ඔබගේ නිවැරදි Render Backend URL එක (Vercel නොව Render විය යුතුය)
+  return "https://lak-travelers-api.onrender.com/api"; 
 };
 
 const API = axios.create({
@@ -24,7 +27,7 @@ const API = axios.create({
   },
 });
 
-// ✅ Request Interceptor
+// ✅ Request Interceptor: Token එක Header එකට එකතු කිරීම
 API.interceptors.request.use(
   (config) => {
     const userInfo = localStorage.getItem('userInfo');
@@ -43,13 +46,14 @@ API.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// ✅ Response Interceptor
+// ✅ Response Interceptor: Error හසුරුවා ගැනීම
 API.interceptors.response.use(
   (response) => response,
   (error) => {
     const message = error.response?.data?.message || error.message;
     console.error('API Error Response:', message);
     
+    // 401 Unauthorized නම් Logout කර Login පිටුවට යැවීම
     if (error.response?.status === 401) {
       localStorage.removeItem('userInfo');
       if (window.location.pathname !== '/login') {
