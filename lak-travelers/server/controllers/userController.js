@@ -30,31 +30,31 @@ export const sendOTP = asyncHandler(async (req, res) => {
     throw new Error('User already exists');
   }
 
-// ✅ වඩාත් ස්ථාවර Nodemailer Transporter සැකසුම
+  // ✅ Render/Cloud සඳහා වඩාත් ස්ථාවර Nodemailer Transporter සැකසුම
   const transporter = nodemailer.createTransport({
     host: 'smtp.gmail.com',
     port: 587,
-    secure: false, // Port 587 සඳහා මෙය false විය යුතුය
+    secure: false, // Port 587 සඳහා අනිවාර්යයෙන්ම false විය යුතුය
     auth: {
       user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS.replace(/\s/g, ''), // Password එකේ හිස්තැන් ඇත්නම් ඉවත් කරයි
+      pass: process.env.EMAIL_PASS.replace(/\s/g, ''), // App Password එකේ හිස්තැන් ඇත්නම් ඉවත් කරයි
     },
-    connectionTimeout: 20000, // තත්පර 20ක් දක්වා කාලය වැඩි කරන ලදී
+    // Cloud සර්වර් වලදී සිදුවන ප්‍රමාදයන් වැළැක්වීමට උපරිම කාලය ලබා දීම
+    connectionTimeout: 20000, 
     socketTimeout: 30000,
     greetingTimeout: 20000,
     tls: {
-      rejectUnauthorized: false, // Cloud environment වලදී මෙය අත්‍යවශ්‍ය වේ
+      rejectUnauthorized: false,
       minVersion: "TLSv1.2"
     }
   });
 
-  
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  otpStore[email.toLowerCase()] = { otp, expires: Date.now() + 600000 }; 
+  otpStore[email.trim().toLowerCase()] = { otp, expires: Date.now() + 600000 }; 
 
   const mailOptions = {
     from: `"Lak Travelers" <${process.env.EMAIL_USER}>`,
-    to: email.toLowerCase(),
+    to: email.trim().toLowerCase(),
     subject: 'Verification Code - Lak Travelers',
     html: `
       <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px; max-width: 500px;">
@@ -63,19 +63,21 @@ export const sendOTP = asyncHandler(async (req, res) => {
         <div style="background: #f1f3f4; padding: 15px; text-align: center; border-radius: 8px;">
           <h1 style="margin: 0; letter-spacing: 8px; color: #333; font-size: 32px;">${otp}</h1>
         </div>
-        <p style="text-align: center; color: #777; font-size: 12px; margin-top: 20px;">This code will expire in 10 minutes.</p>
+        <p style="text-align: center; color: #777; font-size: 12px; margin-top: 20px;">This code will expire in 10 minutes. If you did not request this, please ignore this email.</p>
       </div>
     `,
   };
 
-  // ✅ Try-Catch භාවිතයෙන් සර්වර් එක Crash වීම වැළැක්වීම
   try {
+    // ඊමේල් එක යැවීමට උත්සාහ කිරීම
     await transporter.sendMail(mailOptions);
+    console.log(`✅ OTP sent successfully to: ${email}`);
     res.status(200).json({ message: 'OTP sent successfully!' });
   } catch (error) {
+    // ඊමේල් එක යැවීමට නොහැකි වුවහොත් සර්වර් එක Crash නොවී Error එක පෙන්වීම
     console.error("🚨 Nodemailer Critical Error:", error.message);
     res.status(500);
-    throw new Error('Email server connection timeout. Please try again in a moment.');
+    throw new Error('Email server connection timeout. Please check your network or credentials.');
   }
 });
 
@@ -85,7 +87,7 @@ export const sendOTP = asyncHandler(async (req, res) => {
 export const registerUser = asyncHandler(async (req, res) => {
   const { name, email, password, role, otp } = req.body;
 
-  const emailKey = email.toLowerCase();
+  const emailKey = email.trim().toLowerCase();
   const otpData = otpStore[emailKey];
 
   if (!otpData || otpData.otp !== otp) {
@@ -129,7 +131,7 @@ export const registerUser = asyncHandler(async (req, res) => {
  */
 export const authUser = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
-  const user = await User.findOne({ email: email.toLowerCase() });
+  const user = await User.findOne({ email: email.trim().toLowerCase() });
 
   if (user && (await user.matchPassword(password))) {
     const token = generateToken(res, user._id);
@@ -176,7 +178,7 @@ export const updateUserProfile = asyncHandler(async (req, res) => {
 
   if (user) {
     user.name = req.body.name || user.name;
-    user.email = (req.body.email || user.email).toLowerCase();
+    user.email = (req.body.email || user.email).trim().toLowerCase();
     if (req.body.profileImage) user.profileImage = req.body.profileImage;
     if (req.body.password) user.password = req.body.password;
 
@@ -251,7 +253,7 @@ export const rejectVendor = asyncHandler(async (req, res) => {
  */
 export const adminCreateUser = asyncHandler(async (req, res) => {
   const { name, email, password, role, isApproved } = req.body;
-  const userExists = await User.findOne({ email: email.toLowerCase() });
+  const userExists = await User.findOne({ email: email.trim().toLowerCase() });
 
   if (userExists) {
     res.status(400);
@@ -260,7 +262,7 @@ export const adminCreateUser = asyncHandler(async (req, res) => {
 
   const user = await User.create({
     name,
-    email: email.toLowerCase(),
+    email: email.trim().toLowerCase(),
     password,
     role: role || 'user',
     isApproved: isApproved !== undefined ? isApproved : true,
@@ -281,7 +283,7 @@ export const adminUpdateUser = asyncHandler(async (req, res) => {
   const user = await User.findById(req.params.id);
   if (user) {
     user.name = req.body.name || user.name;
-    user.email = (req.body.email || user.email).toLowerCase();
+    user.email = (req.body.email || user.email).trim().toLowerCase();
     user.role = req.body.role || user.role;
     user.isApproved = req.body.isApproved !== undefined ? req.body.isApproved : user.isApproved;
     if (req.body.vendorDetails) user.vendorDetails = { ...user.vendorDetails, ...req.body.vendorDetails };
