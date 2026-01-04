@@ -53,7 +53,7 @@ const Register = () => {
 
   /**
    * 📧 1. OTP එක Email එකට යැවීමේ ක්‍රියාවලිය
-   * මෙහිදී /api/users/send-otp ලෙස ලිපිනය නිවැරදි කර ඇත.
+   * මෙහිදී /api කොටස ඉවත් කර ඇත, මන්ද එය දැනටමත් API service එකේ අඩංගු බැවිනි.
    */
   const handleSendOtp = async (e) => {
     e.preventDefault();
@@ -66,8 +66,8 @@ const Register = () => {
 
     setIsLoading(true);
     try {
-      // ✅ නිවැරදි කළ ලිපිනය: /api/users/send-otp
-      await API.post('/api/users/send-otp', { email: email.trim().toLowerCase() });
+      // ✅ නිවැරදි කළ ලිපිනය: baseURL දැනටමත් /api ඇති නිසා '/users/send-otp' පමණක් ප්‍රමාණවත්ය.
+      await API.post('/users/send-otp', { email: email.trim().toLowerCase() });
       setIsOtpSent(true);
       toast.success('Verification code sent to your email! 📩');
     } catch (error) {
@@ -79,7 +79,6 @@ const Register = () => {
 
   /**
    * 🚀 2. OTP එක Verify කර Register වීමේ ක්‍රියාවලිය
-   * මෙහිදී /api/users ලෙස ලිපිනය නිවැරදි කර ඇත.
    */
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -92,8 +91,8 @@ const Register = () => {
 
     setIsLoading(true);
     try {
-      // ✅ නිවැරදි කළ ලිපිනය: /api/users
-      const { data } = await API.post('/api/users', {
+      // ✅ නිවැරදි කළ ලිපිනය: '/users'
+      const { data } = await API.post('/users', {
         name: name.trim(),
         email: email.trim().toLowerCase(),
         password,
