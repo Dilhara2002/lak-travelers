@@ -7,7 +7,7 @@ import Vehicle from '../models/Vehicle.js';
 import generateToken from '../utils/generateToken.js';
 import nodemailer from 'nodemailer';
 
-// OTP තාවකාලිකව ගබඩා කිරීමට (Redis for production - මේවා වෙනුවට Redis භාවිතා කරන්න)
+// stor tempory OTP
 const otpStore = new Map();
 
 /**
@@ -25,7 +25,7 @@ export const sendOTP = asyncHandler(async (req, res) => {
 
   const normalizedEmail = email.trim().toLowerCase();
   
-  // එක email එකකට අධික OTP requests වැළැක්වීම
+  // Preventing multiple OTP requests per email
   const lastRequest = otpStore.get(`${normalizedEmail}_time`);
   if (lastRequest && Date.now() - lastRequest < 30000) {
     res.status(429);
@@ -39,9 +39,9 @@ export const sendOTP = asyncHandler(async (req, res) => {
     throw new Error('User already exists');
   }
 
-  // ✅ RENDER.COM සඳහා OPTIMIZED NODEMAILER CONFIGURATION
+  //  RENDER.COM
   const transporter = nodemailer.createTransport({
-    service: 'gmail', // Service name එක් කිරීම Render.com වලදී වඩා හොඳය
+    service: 'gmail', 
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS,
@@ -58,14 +58,14 @@ export const sendOTP = asyncHandler(async (req, res) => {
 
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
   
-  // OTP store කිරීම (10 minutes expiry)
+  // OTP store (10 minutes expiry)
   otpStore.set(normalizedEmail, {
     otp,
     expires: Date.now() + 10 * 60 * 1000, // 10 minutes
     attempts: 0
   });
   
-  // Last request time store කිරීම
+  // Last request time store 
   otpStore.set(`${normalizedEmail}_time`, Date.now());
 
   // OTP cleanup function
@@ -102,7 +102,7 @@ export const sendOTP = asyncHandler(async (req, res) => {
       return;
     }
 
-    // Production mode - email යවන්න
+    // Production mode - email 
     await transporter.sendMail(mailOptions);
     console.log(`✅ OTP sent successfully to: ${normalizedEmail}`);
     
@@ -126,7 +126,7 @@ export const sendOTP = asyncHandler(async (req, res) => {
       return;
     }
     
-    // Production mode එකේදී error throw කරන්න
+    // Production mode  error throw 
     res.status(500);
     throw new Error('Unable to send verification email. Please try again later.');
   }
@@ -389,35 +389,66 @@ export const updateVendorProfile = asyncHandler(async (req, res) => {
     throw new Error('User not found');
   }
 
-  // Validate vendor data
-  const { businessName, businessAddress, businessPhone, businessRegNo } = req.body;
+  // ✅ ගැටලුව විසඳීම: Frontend එකෙන් එන නම් (businessName, address, phone) 
+  // Backend එකේ බලාපොරොත්තු වන නම් වලට ගැලපෙන සේ මෙහිදී Destructure කරන්න.
+  const { 
+    businessName, 
+    address, 
+    phone, 
+    serviceType, 
+    registrationNumber, 
+    description,
+    hotelStarRating,
+    vehicleFleetSize,
+    guideLanguages,
+    experienceYears,
+    profileImage,
+    idFront,
+    idBack 
+  } = req.body;
   
-  if (!businessName || !businessAddress || !businessPhone) {
+  // Validation - මෙහිදී Frontend එකෙන් එවන 'address' සහ 'phone' පරීක්ෂා කෙරේ.
+  if (!businessName || !address || !phone) {
     res.status(400);
     throw new Error('Business name, address, and phone are required');
   }
 
+  // 🗄️ Database එකේ Store කරන ආකාරය
   user.vendorDetails = { 
     ...user.vendorDetails, 
     businessName: businessName.trim(),
-    businessAddress: businessAddress.trim(),
-    businessPhone: businessPhone.trim(),
-    businessRegNo: businessRegNo?.trim() || '',
+    businessAddress: address.trim(), // Frontend address -> Backend businessAddress
+    businessPhone: phone.trim(),     // Frontend phone -> Backend businessPhone
+    businessRegNo: registrationNumber?.trim() || '',
+    serviceType: serviceType,
+    description: description,
+    hotelStarRating: hotelStarRating,
+    vehicleFleetSize: vehicleFleetSize,
+    guideLanguages: guideLanguages,
+    experienceYears: experienceYears,
+    profileImage: profileImage,
+    idDocuments: {
+      front: idFront,
+      back: idBack
+    },
     updatedAt: Date.now()
   };
   
-  // When vendor updates profile, require re-approval
-  if (user.role === 'vendor') {
-    user.isApproved = false;
-    user.approvalStatus = 'pending';
-  }
+  // Vendor කෙනෙක් Profile එක update කළොත් නැවත Approval අවශ්‍යයි
+  user.role = 'vendor';
+  user.isApproved = false;
+  user.approvalStatus = 'pending';
 
   const updatedUser = await user.save();
   
   res.status(200).json({
-    ...updatedUser.toObject(),
-    message: 'Vendor profile updated. Requires admin approval.',
-    password: undefined
+    _id: updatedUser._id,
+    name: updatedUser.name,
+    email: updatedUser.email,
+    role: updatedUser.role,
+    isApproved: updatedUser.isApproved,
+    vendorDetails: updatedUser.vendorDetails,
+    message: 'Vendor profile updated. Requires admin approval.'
   });
 });
 
