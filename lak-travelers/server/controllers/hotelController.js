@@ -6,6 +6,8 @@ import Hotel from '../models/Hotel.js';
  * @route   GET /api/hotels
  * @access  Public
  */
+
+// use Dynamic Querying
 const getHotels = asyncHandler(async (req, res) => {
   const keyword = req.query.keyword
     ? {

@@ -11,7 +11,7 @@ export const submitReview = async (req, res) => {
     const { targetId, targetType, comment, safetyScore, hygieneScore, serviceQuality, mediaUrl } = req.body;
     const userId = req.user._id;
 
-    // 1. Collect: නව Review එක ගබඩා කිරීම
+    // 1. Collect: Storing the new review
     const review = await Review.create({
       user: userId,
       [targetType]: targetId,
@@ -22,17 +22,17 @@ export const submitReview = async (req, res) => {
       mediaUrl
     });
 
-    // 2. Analyze & Recalibrate: සේවා මට්ටම යාවත්කාලීන කිරීම
-    // අදාළ හෝටලයේ හෝ වාහනයේ සියලුම Reviews ලබාගෙන සාමාන්‍ය අගය ගණනය කරයි.
+    // 2. Analyze & Recalibrate: Updating the service level
+// Retrieves all reviews of the relevant hotel or vehicle and calculates the average value.
     const allReviews = await Review.find({ [targetType]: targetId });
     
     const avgSafety = allReviews.reduce((acc, curr) => acc + curr.safetyScore, 0) / allReviews.length;
     const avgHygiene = allReviews.reduce((acc, curr) => acc + curr.hygieneScore, 0) / allReviews.length;
     
-    // AI Reputation Modeling: Trust Score එක ගණනය කිරීම (අගය 1-100 අතරට හරවයි)
+    // AI Reputation Modeling: Trust Score calculate 
     const newTrustScore = Math.round(((avgSafety + avgHygiene + (serviceQuality || 5)) / 3) * 10);
 
-    // 3. Update Service Node: Graph එකේ ඇති දත්ත යාවත්කාලීන කිරීම
+    // 3. Update Service Node: Graph data update
     if (targetType === "hotel") {
       await Hotel.findByIdAndUpdate(targetId, { reputationScore: newTrustScore });
     } else if (targetType === "vehicle") {
@@ -52,7 +52,7 @@ export const submitReview = async (req, res) => {
 
 /**
  * 📈 GET REPUTATION DATA
- * AI Nudging සඳහා අවශ්‍ය දත්ත ලබා ගනී.
+ * AI Nudging 
  */
 export const getServiceReputation = async (req, res) => {
     try {

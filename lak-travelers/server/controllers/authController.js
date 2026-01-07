@@ -3,7 +3,7 @@ import User from '../models/User.js';
 import generateToken from '../utils/generateToken.js';
 
 /**
- * @desc    අලුත් පරිශීලකයෙකු ලියාපදිංචි කිරීම
+ * @desc    
  * @route   POST /api/users
  * @access  Public
  */
@@ -23,7 +23,7 @@ const registerUser = asyncHandler(async (req, res) => {
     password,
     role: role || 'user',
     language: language || 'en',
-    isApproved: role === 'vendor' ? false : true, // Vendor කෙනෙක් නම් Admin අනුමැතිය ලැබෙන තෙක් false වේ
+    isApproved: role === 'vendor' ? false : true, // If you are a vendor, it will be false until Admin approval is received.
   });
 
   if (user) {
@@ -42,7 +42,7 @@ const registerUser = asyncHandler(async (req, res) => {
 });
 
 /**
- * @desc    පරිශීලකයා Login කරවීම (Authentication)
+ * @desc     Login (Authentication)
  * @route   POST /api/users/auth
  * @access  Public
  */
@@ -52,7 +52,7 @@ const authUser = asyncHandler(async (req, res) => {
   const user = await User.findOne({ email });
 
   if (user && (await user.matchPassword(password))) {
-    // ටෝකන් එක සාදා Cookie එකක් ලෙස යැවීම
+    // Create the token and send it as a cookie
     generateToken(res, user._id);
 
     res.status(200).json({
@@ -69,17 +69,17 @@ const authUser = asyncHandler(async (req, res) => {
 });
 
 /**
- * @desc    පරිශීලකයා Logout කරවීම
+ * @desc     Logout 
  * @route   POST /api/users/logout
  * @access  Public
  */
 const logoutUser = asyncHandler(async (req, res) => {
-  // ✅ Logout වීමේදී Cookie එක සම්පූර්ණයෙන්ම ඉවත් කිරීමට නිවැරදි සැකසුම් (Security settings) ලබා දිය යුතුය
+  //  You must provide the correct security settings to completely remove the cookie when logging out.
   res.cookie('jwt', '', {
     httpOnly: true,
     expires: new Date(0),
-    secure: true,       // Vercel/HTTPS සඳහා අනිවාර්යයි
-    sameSite: 'none',   // Cross-domain සඳහා අනිවාර්යයි
+    secure: true,       // Vercel/HTTPS 
+    sameSite: 'none',   // Cross-domain 
     path: '/',
   });
 

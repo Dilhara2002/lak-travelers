@@ -27,13 +27,12 @@ router.post('/save-plan', protect, async (req, res) => {
   res.status(201).json(savedPlan);
 });
 
-// පරිශීලකයාගේ සියලුම සැලසුම් ලබා ගැනීම
 router.get('/my-plans', protect, async (req, res) => {
   const plans = await Plan.find({ user: req.user._id }).sort({ createdAt: -1 });
   res.json(plans);
 });
 
-// ප්ලෑන් එකක් Delete කිරීම
+
 router.delete('/plan/:id', protect, async (req, res) => {
   const plan = await Plan.findById(req.params.id);
 

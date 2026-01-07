@@ -88,17 +88,16 @@ export const chatWithAI = async (req, res) => {
     const groq = getGroqClient();
     if (!groq) return res.status(500).json({ success: false, reply: "AI Error" });
 
-    // 1. Context Retrieval (දත්ත ලබා ගැනීම)
+    // 1. Context Retrieval 
     const context = await getGraphContext(message);
 
-    // 2. Chat History එක AI එකට මතක තබා ගැනීමට නිවැරදිව සකස් කිරීම
-    // පෙර කතාබහ "assistant" සහ "user" ලෙස වෙන් කර හඳුනා ගනී.
+    // 2. Chat History 
     const formattedHistory = (history || []).map(item => ({
       role: item.role === "assistant" || item.role === "model" ? "assistant" : "user",
       content: item.content || (Array.isArray(item.parts) ? item.parts[0].text : "")
     }));
 
-    // 3. Dynamic Cognitive Prompt (පිළිතුරු වල විවිධත්වය සඳහා)
+    // 3. Dynamic Cognitive Prompt 
     const systemPrompt = `
       You are the **Lak Travelers Spatial & Financial Architect** using GraphRAG and CCTNS. 
       Guide the user intelligently by considering the conversation history and the context below.
@@ -120,11 +119,11 @@ export const chatWithAI = async (req, res) => {
     const chatCompletion = await groq.chat.completions.create({
       messages: [
         { role: "system", content: systemPrompt },
-        ...formattedHistory, // පෙර කතාබහ මෙහි ඇතුළත් වේ
+        ...formattedHistory, // old chat
         { role: "user", content: message }
       ],
       model: "llama-3.3-70b-versatile",
-      temperature: 0.7, // පිළිතුරු නිර්මාණශීලී වීමට අගය 0.7 දක්වා වැඩි කරන ලදී
+      temperature: 0.7, 
     });
 
     res.status(200).json({ 

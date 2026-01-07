@@ -5,6 +5,7 @@ const reviewSchema = new mongoose.Schema({
   hotel: { type: mongoose.Schema.Types.ObjectId, ref: "Hotel" },
   vehicle: { type: mongoose.Schema.Types.ObjectId, ref: "Vehicle" },
   comment: { type: String, required: true },
+  
   // CCTNS Pillars: Community feedback metrics
   safetyScore: { type: Number, min: 1, max: 10, default: 5 },
   hygieneScore: { type: Number, min: 1, max: 10, default: 5 },

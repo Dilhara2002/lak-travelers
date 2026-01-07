@@ -7,16 +7,16 @@ import User from './models/User.js';
 import db from './config/db.js';
 
 dotenv.config();
-db(); // MongoDB සම්බන්ධ කිරීම
+db(); 
 
 const importData = async () => {
   try {
-    // ⚠️ අවධානයට: දැනට ඇති දත්ත මැකීමට අවශ්‍ය නම් පහත පේළි අන්-කමෙන්ට් (uncomment) කරන්න
+    
     // await Hotel.deleteMany();
     // await Vehicle.deleteMany();
     // await Tour.deleteMany();
 
-    // 🔑 ඔබේ MongoDB එකේ සිටින Admin User ගේ ID එක මෙතැනට ඇතුළත් කරන්න
+    // 
     const adminUser = "65a1234567890abcdef12345"; 
 
     // --- 🏨 SAMPLE HOTELS DATA ---
